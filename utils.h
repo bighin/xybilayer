@@ -71,7 +71,7 @@ struct ibond2d_t
 
 struct ibond2d_t *ibond2d_init(int x,int y);
 void ibond2d_fini(struct ibond2d_t *b);
-double ibond2d_get_value(struct ibond2d_t *b,int x,int y,short direction);
+int ibond2d_get_value(struct ibond2d_t *b,int x,int y,short direction);
 void ibond2d_set_value(struct ibond2d_t *b,int x,int y,short direction,int value);
 
 struct vbond2d_t

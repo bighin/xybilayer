@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "utils.h"
 
 void init_prng(void)
@@ -299,7 +301,7 @@ void ibond2d_fini(struct ibond2d_t *b)
 	}
 }
 
-double ibond2d_get_value(struct ibond2d_t *b,int x,int y,short direction)
+int ibond2d_get_value(struct ibond2d_t *b,int x,int y,short direction)
 {
 	return b->vals[direction][MAKE_BOND_INDEX(b,x,y)];
 }
@@ -358,6 +360,7 @@ void vbond2d_set_value(struct vbond2d_t *vb,int x,int y,double val)
 {
 	vb->vals[MAKE_INDEX(vb,x,y)]=val;
 }
+
 struct ivbond2d_t *ivbond2d_init(int x,int y)
 {
 	struct ivbond2d_t *ret;
