@@ -5,8 +5,7 @@
 #include "pcc.h"
 #include "stat.h"
 #include "bilayer.h"
-
-#define VERBOSE
+#include "libprogressbar/progressbar.h"
 
 int main_xy(void)
 {
@@ -23,6 +22,12 @@ int main_xy(void)
 	for(d=0;d<NR_DIMENSIONS;d++)
 	{
 		int dimensions[NR_DIMENSIONS]={8,16,24,32,48};
+		progressbar *progress;
+		char description[128];
+		
+		snprintf(description,128,"D=%d",dimensions[d]);
+
+		progress=progressbar_new(description,AVGSAMPLES);
 
 #pragma omp parallel for
 
@@ -36,18 +41,14 @@ int main_xy(void)
 
 			{
 				samples_add_entry(tc,localtc);
-
-#ifdef VERBOSE
-				fprintf(stderr,".");
-#endif
+				progressbar_inc(progress);
 			}
 		}
 
-#ifdef VERBOSE
-				fprintf(stderr,"\n");
-#endif
+		progressbar_finish(progress);
 
-		printf("%d %f +- %f\n",dimensions[d],samples_get_average(tc),sqrt(samples_get_variance(tc)));
+		fprintf(stdout,"%d %f +- %f\n",dimensions[d],samples_get_average(tc),sqrt(samples_get_variance(tc)));
+		fflush(stdout);
 	}
 
 	samples_fini(tc);
@@ -82,7 +83,7 @@ int main_ising(void)
 	return 0;
 }
 
-int main(void)
+int main_bilayer(void)
 {
 	struct samples_t *tc;
 	int c,d;
@@ -92,11 +93,17 @@ int main(void)
 	tc=samples_init();
 
 #define NR_DIMENSIONS	(5)
-#define AVGSAMPLES	(100)
+#define AVGSAMPLES	(20)
 
 	for(d=0;d<NR_DIMENSIONS;d++)
 	{
 		int dimensions[NR_DIMENSIONS]={8,16,24,32,48};
+		progressbar *progress;
+		char description[128];
+		
+		snprintf(description,128,"D=%d",dimensions[d]);
+
+		progress=progressbar_new(description,AVGSAMPLES);
 
 #pragma omp parallel for
 
@@ -110,21 +117,22 @@ int main(void)
 
 			{
 				samples_add_entry(tc,localtc);
-
-#ifdef VERBOSE
-				fprintf(stderr,"%f\n",localtc);
-#endif
+				progressbar_inc(progress);
 			}
 		}
 
-#ifdef VERBOSE
-				fprintf(stderr,"\n");
-#endif
+		progressbar_finish(progress);
 
-		printf("%d %f +- %f\n",dimensions[d],samples_get_average(tc),sqrt(samples_get_variance(tc)));
+		fprintf(stdout,"%d %f +- %f\n",dimensions[d],samples_get_average(tc),sqrt(samples_get_variance(tc)));
+		fflush(stdout);
 	}
 
 	samples_fini(tc);
 
 	return 0;
+}
+
+int main(void)
+{
+	return main_bilayer();
 }
