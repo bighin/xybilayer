@@ -81,9 +81,9 @@ void wolff_embedded_cluster(struct spin2d_t *cfgt,struct vec2d_t **parallel,stru
 	*Jij1=bond2d_init(cfgt->lx,cfgt->ly);
 	*Jij2=bond2d_init(cfgt->lx,cfgt->ly);
 
-	for(x=0;x<cfgt->lx-1;x++)
+	for(x=0;x<cfgt->lx;x++)
 	{
-		for(y=0;y<cfgt->ly-1;y++)
+		for(y=0;y<cfgt->ly;y++)
 		{
 			double si[2],sj[2],r[2],q[2],z1,z2;
 
@@ -96,23 +96,29 @@ void wolff_embedded_cluster(struct spin2d_t *cfgt,struct vec2d_t **parallel,stru
 			si[0]=cos(spin2d_get_spin(cfgt,x,y));
 			si[1]=sin(spin2d_get_spin(cfgt,x,y));
 
-			sj[0]=cos(spin2d_get_spin(cfgt,x+1,y));
-			sj[1]=sin(spin2d_get_spin(cfgt,x+1,y));
+			if((x+1)<cfgt->lx)
+			{
+				sj[0]=cos(spin2d_get_spin(cfgt,x+1,y));
+				sj[1]=sin(spin2d_get_spin(cfgt,x+1,y));
 
-			z1=J*fabs(si[0]*r[0]+si[1]*r[1])*fabs(sj[0]*r[0]+sj[1]*r[1]);
-			z2=J*fabs(si[0]*q[0]+si[1]*q[1])*fabs(sj[0]*q[0]+sj[1]*q[1]);
+				z1=J*fabs(si[0]*r[0]+si[1]*r[1])*fabs(sj[0]*r[0]+sj[1]*r[1]);
+				z2=J*fabs(si[0]*q[0]+si[1]*q[1])*fabs(sj[0]*q[0]+sj[1]*q[1]);
 
-			bond2d_set_value(*Jij1,x,y,DIR_X,z1);
-			bond2d_set_value(*Jij2,x,y,DIR_X,z2);
+				bond2d_set_value(*Jij1,x,y,DIR_X,z1);
+				bond2d_set_value(*Jij2,x,y,DIR_X,z2);
+			}
 
-			sj[0]=cos(spin2d_get_spin(cfgt,x,y+1));
-			sj[1]=sin(spin2d_get_spin(cfgt,x,y+1));
+			if((y+1)<cfgt->ly)
+			{
+				sj[0]=cos(spin2d_get_spin(cfgt,x,y+1));
+				sj[1]=sin(spin2d_get_spin(cfgt,x,y+1));
 
-			z1=J*fabs(si[0]*r[0]+si[1]*r[1])*fabs(sj[0]*r[0]+sj[1]*r[1]);
-			z2=J*fabs(si[0]*q[0]+si[1]*q[1])*fabs(sj[0]*q[0]+sj[1]*q[1]);
+				z1=J*fabs(si[0]*r[0]+si[1]*r[1])*fabs(sj[0]*r[0]+sj[1]*r[1]);
+				z2=J*fabs(si[0]*q[0]+si[1]*q[1])*fabs(sj[0]*q[0]+sj[1]*q[1]);
 
-			bond2d_set_value(*Jij1,x,y,DIR_Y,z1);
-			bond2d_set_value(*Jij2,x,y,DIR_Y,z2);
+				bond2d_set_value(*Jij1,x,y,DIR_Y,z1);
+				bond2d_set_value(*Jij2,x,y,DIR_Y,z2);
+			}
 		}
 	}
 }
@@ -136,36 +142,43 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 	{
 		bonds[c]=ibond2d_init(epsilon[c]->lx,epsilon[c]->ly);
 
-		for(x=0;x<epsilon[c]->lx-1;x++)
+		for(x=0;x<epsilon[c]->lx;x++)
 		{
-			for(y=0;y<epsilon[c]->ly-1;y++)
+			for(y=0;y<epsilon[c]->ly;y++)
 			{
 				ibond2d_set_value(bonds[c],x,y,DIR_X,0);
-				ibond2d_set_value(bonds[c],x,y,DIR_Y,0);
 
-				/*
-					Se due spin adiacenti lungo x sono concordi allora
-					attivo il bond con probabilità p.
-				*/
-
-				if(ising2d_get_spin(epsilon[c],x,y)==ising2d_get_spin(epsilon[c],x+1,y))
+				if((x+1)<epsilon[c]->lx)
 				{
-					double p=1.0f-exp(-2.0f*beta*bond2d_get_value(Jij[c],x,y,DIR_X));
+					/*
+						Se due spin adiacenti lungo x sono concordi allora
+						attivo il bond con probabilità p.
+					*/
 
-					if(gen_random_number()<p)
-						ibond2d_set_value(bonds[c],x,y,DIR_X,1);
+					if(ising2d_get_spin(epsilon[c],x,y)==ising2d_get_spin(epsilon[c],x+1,y))
+					{
+						double p=1.0f-exp(-2.0f*beta*bond2d_get_value(Jij[c],x,y,DIR_X));
+
+						if(gen_random_number()<p)
+							ibond2d_set_value(bonds[c],x,y,DIR_X,1);
+					}
 				}
 
-				/*
-					Stessa cosa lungo y.
-				*/
-
-				if(ising2d_get_spin(epsilon[c],x,y)==ising2d_get_spin(epsilon[c],x,y+1))
+				if((y+1)<epsilon[c]->ly)
 				{
-					double p=1.0f-exp(-2.0f*beta*bond2d_get_value(Jij[c],x,y,DIR_Y));
+					/*
+						Stessa cosa lungo y.
+					*/
 
-					if(gen_random_number()<p)
-						ibond2d_set_value(bonds[c],x,y,DIR_Y,1);
+					ibond2d_set_value(bonds[c],x,y,DIR_Y,0);
+
+					if(ising2d_get_spin(epsilon[c],x,y)==ising2d_get_spin(epsilon[c],x,y+1))
+					{
+						double p=1.0f-exp(-2.0f*beta*bond2d_get_value(Jij[c],x,y,DIR_Y));
+
+						if(gen_random_number()<p)
+							ibond2d_set_value(bonds[c],x,y,DIR_Y,1);
+					}
 				}
 			}
 		}
@@ -286,11 +299,11 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 			FIXME: i criteri di percolazione vanno sicuramente rivisti
 		*/
 
-		//if((upper==1)&&(this_percolating==1))
-		//		percolating=1;
-	
-		if(this_percolating==1)
+		if((upper==1)&&(this_percolating==1))
 			percolating=1;
+	
+		//if(this_percolating==1)
+		//	percolating=1;
 	}
 
 	/*
@@ -304,6 +317,9 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 		else
 			reset_bcluster(epsilon,bclusters,c,-1);
 	}
+
+	ibond2d_fini(bonds[LOWER_LAYER]);
+	ibond2d_fini(bonds[UPPER_LAYER]);
 
 	bclusters_fini(bclusters);
 	ivbond2d_fini(ivbonds);

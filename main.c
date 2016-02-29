@@ -29,16 +29,20 @@ int main_xy(void)
 
 		progress=progressbar_new(description,AVGSAMPLES);
 
-#pragma omp parallel for
+#define PARALLEL
 
+#ifdef PARALLEL
+#pragma omp parallel for
+#endif
 		for(c=0;c<AVGSAMPLES;c++)
 		{
 			double localtc;
 
 			localtc=1.0f/pcc(dimensions[d],dimensions[d],1.5f,1.0f);
 
+#ifdef PARALLEL
 #pragma omp critical
-
+#endif
 			{
 				samples_add_entry(tc,localtc);
 				progressbar_inc(progress);
@@ -107,7 +111,7 @@ int main_bilayer(void)
 
 #define PARALLEL
 
-#ifdef PARALLELA
+#ifdef PARALLEL
 #pragma omp parallel for
 #endif
 
@@ -139,5 +143,5 @@ int main_bilayer(void)
 
 int main(void)
 {
-	return main_ising();
+	return main_bilayer();
 }

@@ -47,8 +47,6 @@ void ising2d_fini(struct ising2d_t *s);
 int ising2d_get_spin(struct ising2d_t *s,int x,int y);
 void ising2d_set_spin(struct ising2d_t *s,int x,int y,int spin);
 
-#define MAKE_BOND_INDEX(ctx,x,y)	((x)+(ctx->lx-1)*(y))
-
 #define DIR_X	(0)
 #define DIR_Y	(1)
 

@@ -225,36 +225,43 @@ short swendsen_wang_ising_step(struct ising2d_t *epsilon,struct bond2d_t *Jij,do
 
 	bonds=ibond2d_init(epsilon->lx,epsilon->ly);
 
-	for(x=0;x<epsilon->lx-1;x++)
+	for(x=0;x<epsilon->lx;x++)
 	{
-		for(y=0;y<epsilon->ly-1;y++)
+		for(y=0;y<epsilon->ly;y++)
 		{
-			ibond2d_set_value(bonds,x,y,DIR_X,0);
-			ibond2d_set_value(bonds,x,y,DIR_Y,0);
-
-			/*
-				Se due spin adiacenti lungo x sono concordi allora
-				attivo il bond con probabilità p.
-			*/
-
-			if(ising2d_get_spin(epsilon,x,y)==ising2d_get_spin(epsilon,x+1,y))
+			if((x+1)<epsilon->lx)
 			{
-				double p=1.0f-exp(-2.0f*beta*bond2d_get_value(Jij,x,y,DIR_X));
+				ibond2d_set_value(bonds,x,y,DIR_X,0);
 
-				if(gen_random_number()<p)
-					ibond2d_set_value(bonds,x,y,DIR_X,1);
+				/*
+					Se due spin adiacenti lungo x sono concordi allora
+					attivo il bond con probabilità p.
+				*/
+
+				if(ising2d_get_spin(epsilon,x,y)==ising2d_get_spin(epsilon,x+1,y))
+				{
+					double p=1.0f-exp(-2.0f*beta*bond2d_get_value(Jij,x,y,DIR_X));
+
+					if(gen_random_number()<p)
+						ibond2d_set_value(bonds,x,y,DIR_X,1);
+				}
 			}
 
-			/*
-				Stessa cosa lungo y.
-			*/
-
-			if(ising2d_get_spin(epsilon,x,y)==ising2d_get_spin(epsilon,x,y+1))
+			if((y+1)<epsilon->ly)
 			{
-				double p=1.0f-exp(-2.0f*beta*bond2d_get_value(Jij,x,y,DIR_Y));
+				/*
+					Stessa cosa lungo y.
+				*/
 
-				if(gen_random_number()<p)
-					ibond2d_set_value(bonds,x,y,DIR_Y,1);
+				ibond2d_set_value(bonds,x,y,DIR_Y,0);
+
+				if(ising2d_get_spin(epsilon,x,y)==ising2d_get_spin(epsilon,x,y+1))
+				{
+					double p=1.0f-exp(-2.0f*beta*bond2d_get_value(Jij,x,y,DIR_Y));
+
+					if(gen_random_number()<p)
+						ibond2d_set_value(bonds,x,y,DIR_Y,1);
+				}
 			}
 		}
 	}
@@ -366,9 +373,9 @@ short swendsen_wang_step(struct spin2d_t *cfgt,double beta,double J)
 	Jij1=bond2d_init(cfgt->lx,cfgt->ly);
 	Jij2=bond2d_init(cfgt->lx,cfgt->ly);
 
-	for(x=0;x<cfgt->lx-1;x++)
+	for(x=0;x<cfgt->lx;x++)
 	{
-		for(y=0;y<cfgt->ly-1;y++)
+		for(y=0;y<cfgt->ly;y++)
 		{
 			double si[2],sj[2],r[2],q[2],z1,z2;
 
@@ -381,24 +388,29 @@ short swendsen_wang_step(struct spin2d_t *cfgt,double beta,double J)
 			si[0]=cos(spin2d_get_spin(cfgt,x,y));
 			si[1]=sin(spin2d_get_spin(cfgt,x,y));
 
-			sj[0]=cos(spin2d_get_spin(cfgt,x+1,y));
-			sj[1]=sin(spin2d_get_spin(cfgt,x+1,y));
+			if((x+1)<cfgt->lx)
+			{
+				sj[0]=cos(spin2d_get_spin(cfgt,x+1,y));
+				sj[1]=sin(spin2d_get_spin(cfgt,x+1,y));
 
-			z1=J*fabs(si[0]*r[0]+si[1]*r[1])*fabs(sj[0]*r[0]+sj[1]*r[1]);
-			z2=J*fabs(si[0]*q[0]+si[1]*q[1])*fabs(sj[0]*q[0]+sj[1]*q[1]);
+				z1=J*fabs(si[0]*r[0]+si[1]*r[1])*fabs(sj[0]*r[0]+sj[1]*r[1]);
+				z2=J*fabs(si[0]*q[0]+si[1]*q[1])*fabs(sj[0]*q[0]+sj[1]*q[1]);
 
-			bond2d_set_value(Jij1,x,y,DIR_X,z1);
-			bond2d_set_value(Jij2,x,y,DIR_X,z2);
+				bond2d_set_value(Jij1,x,y,DIR_X,z1);
+				bond2d_set_value(Jij2,x,y,DIR_X,z2);
+			}
 
-			sj[0]=cos(spin2d_get_spin(cfgt,x,y+1));
-			sj[1]=sin(spin2d_get_spin(cfgt,x,y+1));
+			if((y+1)<cfgt->ly)
+			{
+				sj[0]=cos(spin2d_get_spin(cfgt,x,y+1));
+				sj[1]=sin(spin2d_get_spin(cfgt,x,y+1));
 
-			z1=J*fabs(si[0]*r[0]+si[1]*r[1])*fabs(sj[0]*r[0]+sj[1]*r[1]);
-			z2=J*fabs(si[0]*q[0]+si[1]*q[1])*fabs(sj[0]*q[0]+sj[1]*q[1]);
+				z1=J*fabs(si[0]*r[0]+si[1]*r[1])*fabs(sj[0]*r[0]+sj[1]*r[1]);
+				z2=J*fabs(si[0]*q[0]+si[1]*q[1])*fabs(sj[0]*q[0]+sj[1]*q[1]);
 
-			bond2d_set_value(Jij1,x,y,DIR_Y,z1);
-			bond2d_set_value(Jij2,x,y,DIR_Y,z2);
-
+				bond2d_set_value(Jij1,x,y,DIR_Y,z1);
+				bond2d_set_value(Jij2,x,y,DIR_Y,z2);
+			}
 		}
 	}
 

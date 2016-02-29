@@ -57,16 +57,6 @@ void ising2d_grow_clusters(struct ibond2d_t *bonds,struct clusters_t *clusters,i
 
 	clusters_set_value(clusters,x,y,nr_clusters);
 
-	if(((x+1)<clusters->lx)&&((y+1)<clusters->ly))
-	{
-		if(ibond2d_get_value(bonds,x,y,DIR_X)==1)
-			ising2d_grow_clusters(bonds,clusters,x+1,y,nr_clusters);
-
-		if(ibond2d_get_value(bonds,x,y,DIR_Y)==1)
-			ising2d_grow_clusters(bonds,clusters,x,y+1,nr_clusters);
-	}
-
-	/*
 	if((x+1)<clusters->lx)
 		if(ibond2d_get_value(bonds,x,y,DIR_X)==1)
 			ising2d_grow_clusters(bonds,clusters,x+1,y,nr_clusters);
@@ -74,15 +64,12 @@ void ising2d_grow_clusters(struct ibond2d_t *bonds,struct clusters_t *clusters,i
 	if((y+1)<clusters->ly)
 		if(ibond2d_get_value(bonds,x,y,DIR_Y)==1)
 			ising2d_grow_clusters(bonds,clusters,x,y+1,nr_clusters);
-	*/
 
-	if((x>0)&&((y+1)<clusters->ly))
-	//if(x>0)
+	if(x>0)
 		if(ibond2d_get_value(bonds,x-1,y,DIR_X)==1)
 			ising2d_grow_clusters(bonds,clusters,x-1,y,nr_clusters);
 
-	if((y>0)&&((x+1)<clusters->lx))
-	//if(y>0)
+	if(y>0)
 		if(ibond2d_get_value(bonds,x,y-1,DIR_Y)==1)
 			ising2d_grow_clusters(bonds,clusters,x,y-1,nr_clusters);
 }
@@ -231,7 +218,7 @@ void ising2d_grow_bclusters(struct ibond2d_t *bonds[2],struct ivbond2d_t *ivbond
 		if(ibond2d_get_value(bonds[l],x,y,DIR_X)==1)
 			ising2d_grow_bclusters(bonds,ivbonds,bclusters,x+1,y,l,nr_clusters);
 
-	if((y+1)<bclusters->lx)
+	if((y+1)<bclusters->ly)
 		if(ibond2d_get_value(bonds[l],x,y,DIR_Y)==1)
 			ising2d_grow_bclusters(bonds,ivbonds,bclusters,x,y+1,l,nr_clusters);
 

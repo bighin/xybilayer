@@ -245,12 +245,12 @@ void bond2d_fini(struct bond2d_t *b)
 
 double bond2d_get_value(struct bond2d_t *b,int x,int y,short direction)
 {
-	return b->vals[direction][MAKE_BOND_INDEX(b,x,y)];
+	return b->vals[direction][MAKE_INDEX(b,x,y)];
 }
 
 void bond2d_set_value(struct bond2d_t *b,int x,int y,short direction,double value)
 {
-	b->vals[direction][MAKE_BOND_INDEX(b,x,y)]=value;
+	b->vals[direction][MAKE_INDEX(b,x,y)]=value;
 }
 
 /*
@@ -303,12 +303,12 @@ void ibond2d_fini(struct ibond2d_t *b)
 
 int ibond2d_get_value(struct ibond2d_t *b,int x,int y,short direction)
 {
-	return b->vals[direction][MAKE_BOND_INDEX(b,x,y)];
+	return b->vals[direction][MAKE_INDEX(b,x,y)];
 }
 
 void ibond2d_set_value(struct ibond2d_t *b,int x,int y,short direction,int value)
 {
-	b->vals[direction][MAKE_BOND_INDEX(b,x,y)]=value;
+	b->vals[direction][MAKE_INDEX(b,x,y)]=value;
 }
 
 /*
