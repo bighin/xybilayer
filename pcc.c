@@ -88,7 +88,7 @@ double pcc_ising(int x,int y,double beta,double J)
 
 	for(c=0;c<x;c++)
 		for(d=0;d<y;d++)
-			ising2d_set_spin(cfgt,x,y,-1+2*(gen_random_int()%2));
+			ising2d_set_spin(cfgt,c,d,-1+2*(gen_random_int()%2));
 			
 	bonds=bond2d_init(x,y);
 	

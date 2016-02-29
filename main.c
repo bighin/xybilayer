@@ -92,29 +92,34 @@ int main_bilayer(void)
 
 	tc=samples_init();
 
-#define NR_DIMENSIONS	(5)
-#define AVGSAMPLES	(20)
+#define NR_DIMENSIONS_BILAYER	(5)
+#define AVGSAMPLES_BILAYER	(20)
 
-	for(d=0;d<NR_DIMENSIONS;d++)
+	for(d=0;d<NR_DIMENSIONS_BILAYER;d++)
 	{
-		int dimensions[NR_DIMENSIONS]={8,16,24,32,48};
+		int dimensions[NR_DIMENSIONS_BILAYER]={8,16,24,32,48};
 		progressbar *progress;
 		char description[128];
 		
 		snprintf(description,128,"D=%d",dimensions[d]);
 
-		progress=progressbar_new(description,AVGSAMPLES);
+		progress=progressbar_new(description,AVGSAMPLES_BILAYER);
 
+#define PARALLEL
+
+#ifdef PARALLELA
 #pragma omp parallel for
+#endif
 
-		for(c=0;c<AVGSAMPLES;c++)
+		for(c=0;c<AVGSAMPLES_BILAYER;c++)
 		{
 			double localtc;
 
 			localtc=1.0f/pcc_bilayer(dimensions[d],dimensions[d],1.5f,1.0f,1.0f,0.0f);
 
+#ifdef PARALLEL
 #pragma omp critical
-
+#endif
 			{
 				samples_add_entry(tc,localtc);
 				progressbar_inc(progress);
@@ -134,5 +139,5 @@ int main_bilayer(void)
 
 int main(void)
 {
-	return main_bilayer();
+	return main_ising();
 }
