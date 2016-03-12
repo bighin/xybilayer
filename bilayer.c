@@ -8,6 +8,7 @@
 
 #include "bilayer.h"
 #include "xy.h"
+#include "common.h"
 
 struct bilayer_t *bilayer_init(int x,int y,double Jup,double Jdown,double K)
 {

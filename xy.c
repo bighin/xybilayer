@@ -41,6 +41,7 @@
 #include <assert.h>
 
 #include "xy.h"
+#include "common.h"
 
 /*
 	Observables:

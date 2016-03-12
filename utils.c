@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "utils.h"
+#include "common.h"
 
 void init_prng(void)
 {
