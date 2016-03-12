@@ -7,9 +7,22 @@
 #include "bilayer.h"
 #include "libprogressbar/progressbar.h"
 
-int main_xy(void)
+int main_xy(int argc,char *argv[])
 {
 	int c,d;
+	FILE *out;
+
+	if(argc!=2)
+	{
+		printf("Usage: %s <logfile>\n",argv[0]);
+		return 0;
+	}
+
+	if(!(out=fopen(argv[1],"w+")))
+	{
+		printf("Couldn't open %s for writing!\n",argv[1]);
+		return 0;
+	}
 
 	init_prng();
 
@@ -51,11 +64,17 @@ int main_xy(void)
 
 		progressbar_finish(progress);
 
+		fprintf(out,"%d %f ",dimensions[d],samples_get_average(tc));
+		fflush(out);
+
 		fprintf(stdout,"%d %f +- %f\n",dimensions[d],samples_get_average(tc),sqrt(samples_get_variance(tc)));
 		fflush(stdout);
 
 		samples_fini(tc);
 	}
+
+	if(out)
+		fclose(out);
 
 	return 0;
 }
@@ -229,5 +248,6 @@ int main_bilayer(int argc,char *argv[])
 
 int main(int argc,char *argv[])
 {
-	return main_bilayer(argc,argv);
+	//return main_bilayer(argc,argv);
+	main_xy(argc,argv);
 }
