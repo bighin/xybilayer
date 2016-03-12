@@ -3,6 +3,7 @@
 */
 
 #include <stdio.h>
+#include <math.h>
 #include <assert.h>
 
 #include "bilayer.h"
@@ -11,10 +12,10 @@
 struct bilayer_t *bilayer_init(int x,int y,double Jup,double Jdown,double K)
 {
 	struct bilayer_t *ret;
-	
+
 	if(!(ret=malloc(sizeof(struct bilayer_t))))
 		return NULL;
-	
+
 	ret->layers[UPPER_LAYER]=spin2d_init(x,y);
 	ret->layers[LOWER_LAYER]=spin2d_init(x,y);
 
@@ -35,7 +36,7 @@ struct bilayer_t *bilayer_init(int x,int y,double Jup,double Jdown,double K)
 	ret->J[LOWER_LAYER]=Jdown;
 	ret->J[UPPER_LAYER]=Jup;
 	ret->K=K;
-	
+
 	return ret;
 }
 
@@ -48,7 +49,7 @@ void bilayer_fini(struct bilayer_t *b)
 
 		if(b->layers[UPPER_LAYER])
 			spin2d_fini(b->layers[UPPER_LAYER]);
-	
+
 		free(b);
 	}
 }
@@ -58,7 +59,7 @@ void wolff_embedded_cluster(struct spin2d_t *cfgt,struct vec2d_t **parallel,stru
 			    struct bond2d_t **Jij1,struct bond2d_t **Jij2,double J)
 {
 	int x,y;
-	
+
 	/*
 		Wolff's embedded cluster
 
@@ -146,10 +147,10 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 		{
 			for(y=0;y<epsilon[c]->ly;y++)
 			{
-				ibond2d_set_value(bonds[c],x,y,DIR_X,0);
-
 				if((x+1)<epsilon[c]->lx)
 				{
+					ibond2d_set_value(bonds[c],x,y,DIR_X,0);
+
 					/*
 						Se due spin adiacenti lungo x sono concordi allora
 						attivo il bond con probabilità p.
@@ -197,7 +198,7 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 			ivbond2d_set_value(ivbonds,x,y,0);
 
 			if(ising2d_get_spin(epsilon[LOWER_LAYER],x,y)==ising2d_get_spin(epsilon[UPPER_LAYER],x,y))
-			{	
+			{
 				double p=1.0f-exp(-2.0f*beta*vbond2d_get_value(vbonds,x,y));
 
 				if(gen_random_number()<p)
@@ -210,7 +211,7 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 		Identifico i clusters
 	*/
 
-		
+
 	bclusters=bclusters_init(epsilon[LOWER_LAYER]->lx,epsilon[LOWER_LAYER]->ly);
 	nr_clusters=ising2d_identify_bclusters(bonds,ivbonds,bclusters);
 
@@ -223,20 +224,20 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 	{
 		int xdim,ydim;
 		short upper,lower,this_percolating=0;
-	
+
 		bcluster_dimensions(epsilon,bclusters,c,&xdim,&ydim);
 
 #define TOPOLOGICAL
 #ifdef TOPOLOGICAL
 		if(xdim==epsilon[0]->lx)
-		{	
+		{
 			for(y=0;y<epsilon[0]->ly;y++)
 			{
 				int a,b;
-				
+
 				a=bclusters_get_value(bclusters,0,y,LOWER_LAYER);
 				b=bclusters_get_value(bclusters,epsilon[0]->lx-1,y,LOWER_LAYER);
-				
+
 				if((a==b)&&(a==c))
 					this_percolating=1;
 			}
@@ -244,21 +245,21 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 			for(y=0;y<epsilon[0]->ly;y++)
 			{
 				int a,b;
-				
+
 				a=bclusters_get_value(bclusters,0,y,UPPER_LAYER);
 				b=bclusters_get_value(bclusters,epsilon[0]->lx-1,y,UPPER_LAYER);
-				
+
 				if((a==b)&&(a==c))
 					this_percolating=1;
 			}
 		}
 
 		if(ydim==epsilon[0]->ly)
-		{	
+		{
 			for(x=0;x<epsilon[0]->lx;x++)
 			{
 				int a,b;
-				
+
 				a=bclusters_get_value(bclusters,x,0,LOWER_LAYER);
 				b=bclusters_get_value(bclusters,x,epsilon[0]->ly-1,LOWER_LAYER);
 
@@ -296,14 +297,14 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 		}
 
 		/*
-			FIXME: i criteri di percolazione vanno sicuramente rivisti
+			FIXME: i criteri di percolazione forse vanno rivisti
 		*/
 
-		if((upper==1)&&(this_percolating==1))
-			percolating=1;
-	
-		//if(this_percolating==1)
+		//if((upper==1)&&(this_percolating==1))
 		//	percolating=1;
+
+		if(this_percolating==1)
+			percolating=1;
 	}
 
 	/*
@@ -333,7 +334,7 @@ short swendsen_wang_step_bilayer(struct bilayer_t *cfgt,double beta)
 	struct ising2d_t *epsilon1[2],*epsilon2[2];
 	struct bond2d_t *Jij1[2],*Jij2[2];
 	struct vbond2d_t *vbonds1,*vbonds2;
-	
+
 	double alpha;
 	int l,x,y;
 	short percolating;
@@ -481,6 +482,6 @@ double pcc_bilayer(int x,int y,double beta,double Jup,double Jdown,double K)
 	}
 
 	bilayer_fini(cfgt);
-	
+
 	return average/((double)(THERMALIZATION));
 }
