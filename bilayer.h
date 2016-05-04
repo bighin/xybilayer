@@ -26,5 +26,6 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 
 short swendsen_wang_step_bilayer(struct bilayer_t *cfgt,double beta);
 double pcc_bilayer(int x,int y,double beta,double Jup,double Jdown,double K);
+int sw_bilayer(int x,int y,double beta,double Jup,double Jdown,double K,double *zks,double *szks,int maxk);
 
 #endif

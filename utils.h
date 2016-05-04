@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#define MIN(x,y)	(((x)<(y))?(x):(y))
+#define MAX(x,y)	(((x)>(y))?(x):(y))
+
 void init_prng(void);
 double gen_random_number(void);
 int gen_random_int(void);

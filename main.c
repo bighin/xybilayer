@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include <assert.h>
 
 #undef PARALLEL
 
@@ -158,7 +159,7 @@ int main_bilayer_crosscheck(void)
 	return 0;
 }
 
-int main_bilayer(int argc,char *argv[])
+int main_bilayer_phase_diagram(int argc,char *argv[])
 {
 	int c,millik,deltamillik,d;
 	FILE *out;
@@ -244,8 +245,112 @@ int main_bilayer(int argc,char *argv[])
 	return 0;
 }
 
+int main_bilayer_correlator(int argc,char *argv[])
+{
+	int x,y,k,maxk,c,runs;
+	double beta,Jup,Jdown,K;
+
+	double *zks,*localzks,*localszks;
+	FILE *out;
+
+	progressbar *progress;
+	char description[1024];
+
+	if(argc!=7)
+	{
+		printf("Usage: %s <logfile> <lattice-size> <runs> <beta> <J> <K>\n",argv[0]);
+		return 0;
+	}
+
+	if(!(out=fopen(argv[1],"w+")))
+	{
+		printf("Couldn't open %s for writing!\n",argv[1]);
+		return 0;
+	}
+
+	/*
+		Inizializziamo i parametri della simulazione leggendo dalla riga di comando,
+		e controlliamo che non siano totalmente assurdi.
+	*/
+
+	x=atoi(argv[2]);
+	y=atoi(argv[2]);
+
+	assert(x>0);
+	assert(x<=1024);
+
+	maxk=MIN(x,y)/2;
+	runs=atoi(argv[3]);
+	
+	assert(runs>0);
+	assert(runs<=1024*4);
+
+	beta=atof(argv[4]);
+
+	Jup=atof(argv[5]);
+	Jdown=atof(argv[5]);
+	K=atof(argv[6]);
+
+	assert(Jup>0.0f);
+	assert(K>0.0f);
+
+	/*
+		Inizializziamo gli array che conterranno il correlatore
+	*/
+
+	zks=malloc(sizeof(double)*maxk);
+	localzks=malloc(sizeof(double)*maxk);
+	localszks=malloc(sizeof(double)*maxk);
+
+	for(k=0;k<maxk;k++)
+		zks[k]=0.0f;
+
+	/*
+		Inizializziamo la progressbar e siamo pronti!
+	*/
+
+	snprintf(description,1024,"(2x%dx%d lattice, beta=%f, J=%f, K=%f)",x,y,beta,Jup,K);
+	description[1023]='\0';
+
+	progress=progressbar_new(description,AVGSAMPLES_BILAYER);
+
+	for(c=0;c<runs;c++)
+	{
+		sw_bilayer(x,y,beta,Jup,Jdown,K,localzks,localszks,maxk);
+
+		for(k=0;k<maxk;k++)
+			zks[k]+=localzks[k];
+		
+		progressbar_inc(progress);
+	}
+
+	progressbar_finish(progress);
+
+	for(k=0;k<maxk;k++)
+		zks[k]/=runs;
+
+	for(k=0;k<maxk;k++)
+		printf("%d %f\n",k,zks[k]);
+
+	if(zks)
+		free(zks);
+
+	if(localzks)
+		free(localzks);
+
+	if(localszks)
+		free(localszks);
+
+	if(out)
+		fclose(out);
+
+	return 0;
+}
+
 int main(int argc,char *argv[])
 {
-	return main_bilayer(argc,argv);
+	return main_bilayer_correlator(argc,argv);
+
+	//return main_bilayer_phasediagram(argc,argv);
 	//return main_xy(argc,argv);
 }

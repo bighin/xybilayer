@@ -9,6 +9,7 @@
 #include "bilayer.h"
 #include "xy.h"
 #include "common.h"
+#include "stat.h"
 
 struct bilayer_t *bilayer_init(int x,int y,double Jup,double Jdown,double K)
 {
@@ -220,6 +221,9 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 		Valuto le dimensioni di ciascun cluster e stabilisco se c'è stata percolazione
 	*/
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+
 	percolating=0;
 	for(c=1;c<nr_clusters;c++)
 	{
@@ -297,16 +301,11 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 			}
 		}
 
-		/*
-			FIXME: i criteri di percolazione forse vanno rivisti
-		*/
-
-		//if((upper==1)&&(this_percolating==1))
-		//		percolating=1;
-
 		if(this_percolating==1)
 			percolating=1;
 	}
+
+#pragma GCC diagnostic pop
 
 	/*
 		Flippo i clusters appena creati
@@ -436,11 +435,11 @@ double pcc_bilayer(int x,int y,double beta,double Jup,double Jdown,double K)
 	double average;
 	int c;
 
-#define THERMALIZATION	(20000)
-#define POST_THERMALIZATION	(10000)
-#define UPDATE_INTERVAL	(10)
+#define PCC_THERMALIZATION		(20000)
+#define PCC_POST_THERMALIZATION		(10000)
+#define PCC_UPDATE_INTERVAL		(10)
 
-	assert(THERMALIZATION>UPDATE_INTERVAL);
+	assert(PCC_THERMALIZATION>PCC_UPDATE_INTERVAL);
 
 	cfgt=bilayer_init(x,y,Jup,Jdown,K);
 	spin2d_random_configuration(cfgt->layers[LOWER_LAYER]);
@@ -456,9 +455,9 @@ double pcc_bilayer(int x,int y,double beta,double Jup,double Jdown,double K)
 	*/
 
 	delta=starting_delta;
-	chi=pow(target_delta/starting_delta,-1.0f/(THERMALIZATION/UPDATE_INTERVAL));
+	chi=pow(target_delta/starting_delta,-1.0f/(PCC_THERMALIZATION/PCC_UPDATE_INTERVAL));
 
-	for(c=0;c<THERMALIZATION;c++)
+	for(c=0;c<PCC_THERMALIZATION;c++)
 	{
 		short percolating;
 
@@ -466,12 +465,12 @@ double pcc_bilayer(int x,int y,double beta,double Jup,double Jdown,double K)
 
 		beta+=((percolating==1)?(-delta):(+delta));
 
-		if((c>0)&&((c%UPDATE_INTERVAL)==0))
+		if((c>0)&&((c%PCC_UPDATE_INTERVAL)==0))
 			delta/=chi;
 	}
 
 	average=0.0f;
-	for(c=0;c<POST_THERMALIZATION;c++)
+	for(c=0;c<PCC_POST_THERMALIZATION;c++)
 	{
 		short percolating;
 
@@ -484,5 +483,174 @@ double pcc_bilayer(int x,int y,double beta,double Jup,double Jdown,double K)
 
 	bilayer_fini(cfgt);
 
-	return average/((double)(POST_THERMALIZATION));
+	return average/((double)(PCC_POST_THERMALIZATION));
+}
+
+/*
+	z_k, ovvero l'osservabile proposto da Andrea Trombettoni:
+
+	exp(i phi_i + i psi_i - i phi_j - i psi_j)
+
+	dove k è la distanza tra i e j, mentre phi e psi sono le variabili
+	angolari definite, rispettivamente, sul layer inferiorie e superiore.
+*/
+
+int zk(struct bilayer_t *cfgt,int k,double *res)
+{
+	int i,j;
+	double rz,iz;
+	
+	rz=iz=0.0f;
+
+	for(i=0;i<cfgt->lx;i++)
+	{
+		for(j=0;j<cfgt->ly;j++)
+		{
+			double psii,psij,phii,phij,phase;
+			double lrz,liz;
+			int ip,jp;
+
+			lrz=liz=0;
+		
+			psii=spin2d_get_spin(cfgt->layers[LOWER_LAYER],i,j);
+			phii=spin2d_get_spin(cfgt->layers[UPPER_LAYER],i,j);
+			
+			ip=(i+k)%cfgt->lx;
+			jp=j;
+			
+			psij=spin2d_get_spin(cfgt->layers[LOWER_LAYER],ip,jp);
+			phij=spin2d_get_spin(cfgt->layers[UPPER_LAYER],ip,jp);
+
+			phase=phii+psii-phij-psij;
+			lrz=+cos(phase);
+			liz=+sin(phase);
+
+			ip=i;
+			jp=(j+k)%cfgt->ly;
+
+			psij=spin2d_get_spin(cfgt->layers[LOWER_LAYER],ip,jp);
+			phij=spin2d_get_spin(cfgt->layers[UPPER_LAYER],ip,jp);
+
+			phase=phii+psii-phij-psij;
+			lrz+=cos(phase);
+			liz+=sin(phase);
+
+			ip=(i+cfgt->lx-k)%cfgt->lx;
+			jp=j;
+
+			psij=spin2d_get_spin(cfgt->layers[LOWER_LAYER],ip,jp);
+			phij=spin2d_get_spin(cfgt->layers[UPPER_LAYER],ip,jp);
+
+			phase=phii+psii-phij-psij;
+			lrz+=cos(phase);
+			liz+=sin(phase);
+
+			ip=i;
+			jp=(j+cfgt->ly-k)%cfgt->ly;
+
+			psij=spin2d_get_spin(cfgt->layers[LOWER_LAYER],ip,jp);
+			phij=spin2d_get_spin(cfgt->layers[UPPER_LAYER],ip,jp);
+
+			phase=phii+psii-phij-psij;
+			lrz+=cos(phase);
+			liz+=sin(phase);		
+			
+			lrz/=4.0f;
+			liz/=4.0f;
+			
+			rz+=lrz;
+			iz+=liz;
+		}
+	}
+
+	rz/=cfgt->lx*cfgt->ly;
+	iz/=cfgt->lx*cfgt->ly;
+	
+	res[0]=rz;
+	res[1]=iz;
+
+	return 0;
+}
+
+/*
+	Swendsen-Wang algorithm for a bilayer.
+
+	The correlator zk is given as a output.
+*/
+
+int sw_bilayer(int x,int y,double beta,double Jup,double Jdown,double K,double *zks,double *szks,int maxk)
+{
+	struct bilayer_t *cfgt;
+	struct samples_t **rzsamples,**izsamples;
+	int c,k;
+
+	assert(maxk>0);
+	assert(maxk<=x);
+	assert(maxk<=y);
+
+	rzsamples=malloc(sizeof(struct samples_t *)*maxk);
+	izsamples=malloc(sizeof(struct samples_t *)*maxk);
+
+	cfgt=bilayer_init(x,y,Jup,Jdown,K);
+	spin2d_random_configuration(cfgt->layers[LOWER_LAYER]);
+	spin2d_random_configuration(cfgt->layers[UPPER_LAYER]);
+
+	/*
+		Warning: the SW_THERMALIZATION and SW_POST_THERMALIZATION values
+		are just tentative and need to be adjusted, in particular as a
+		function of the lattice dimensions.
+	*/
+
+#define SW_THERMALIZATION		(500)
+#define SW_POST_THERMALIZATION		(250)
+
+	for(c=0;c<SW_THERMALIZATION;c++)
+	{
+		swendsen_wang_step_bilayer(cfgt,beta);
+	}
+
+	for(k=0;k<maxk;k++)
+	{
+		rzsamples[k]=samples_init();
+		izsamples[k]=samples_init();
+	}
+
+	for(c=0;c<SW_POST_THERMALIZATION;c++)
+	{
+		double z[2];
+
+		swendsen_wang_step_bilayer(cfgt,beta);
+
+		for(k=0;k<maxk;k++)
+		{
+			z[0]=z[1]=0.0f;
+		
+			zk(cfgt,k,z);
+		
+			samples_add_entry(rzsamples[k],z[0]);
+			samples_add_entry(izsamples[k],z[1]);
+		}
+	}
+
+	for(k=0;k<maxk;k++)
+	{
+		zks[k]=samples_get_average(rzsamples[k]);
+		szks[k]=sqrt(samples_get_variance(rzsamples[k]));
+	}
+
+	for(k=0;k<maxk;k++)
+	{
+		samples_fini(rzsamples[k]);
+		samples_fini(izsamples[k]);
+	}
+
+	if(rzsamples)
+		free(rzsamples);
+
+	if(izsamples)
+		free(izsamples);
+
+	bilayer_fini(cfgt);
+
+	return 0;
 }
