@@ -16,11 +16,11 @@ double pcc(int x,int y,double beta,double J)
 	double average;
 	int c;
 
-#define TOTAL_SWEEPS	(20000)
-#define THERMALIZATION	(10000)
+#define THERMALIZATION	(20000)
+#define POST_THERMALIZATION	(10000)
 #define UPDATE_INTERVAL	(10)
 
-	assert(TOTAL_SWEEPS>UPDATE_INTERVAL);
+	assert(THERMALIZATION>UPDATE_INTERVAL);
 
 	cfgt=spin2d_init(x,y);
 	spin2d_random_configuration(cfgt);
@@ -35,9 +35,9 @@ double pcc(int x,int y,double beta,double J)
 	*/
 
 	delta=starting_delta;
-	chi=pow(target_delta/starting_delta,-1.0f/(TOTAL_SWEEPS/UPDATE_INTERVAL));
+	chi=pow(target_delta/starting_delta,-1.0f/(THERMALIZATION/UPDATE_INTERVAL));
 
-	for(c=0;c<TOTAL_SWEEPS;c++)
+	for(c=0;c<THERMALIZATION;c++)
 	{
 		short percolating;
 
@@ -50,7 +50,7 @@ double pcc(int x,int y,double beta,double J)
 	}
 
 	average=0.0f;
-	for(c=0;c<THERMALIZATION;c++)
+	for(c=0;c<POST_THERMALIZATION;c++)
 	{
 		short percolating;
 
@@ -63,7 +63,7 @@ double pcc(int x,int y,double beta,double J)
 
 	spin2d_fini(cfgt);
 	
-	return average/((double)(THERMALIZATION));
+	return average/((double)(POST_THERMALIZATION));
 }
 
 /*
@@ -78,11 +78,11 @@ double pcc_ising(int x,int y,double beta,double J)
 	double average;
 	int c,d;
 
-#define ISING_TOTAL_SWEEPS	(20000)
-#define ISING_THERMALIZATION	(10000)
-#define ISING_UPDATE_INTERVAL	(10)
+#define ISING_THERMALIZATION		(20000)
+#define ISING_POST_THERMALIZATION	(10000)
+#define ISING_UPDATE_INTERVAL		(10)
 
-	assert(ISING_TOTAL_SWEEPS>ISING_UPDATE_INTERVAL);
+	assert(ISING_THERMALIZATION>ISING_UPDATE_INTERVAL);
 
 	cfgt=ising2d_init(x,y);
 
@@ -105,9 +105,9 @@ double pcc_ising(int x,int y,double beta,double J)
 	target_delta=0.000680f;
 
 	delta=starting_delta;
-	chi=pow(target_delta/starting_delta,-1.0f/(ISING_TOTAL_SWEEPS/ISING_UPDATE_INTERVAL));
+	chi=pow(target_delta/starting_delta,-1.0f/(ISING_THERMALIZATION/ISING_UPDATE_INTERVAL));
 
-	for(c=0;c<ISING_TOTAL_SWEEPS;c++)
+	for(c=0;c<ISING_THERMALIZATION;c++)
 	{
 		short percolating;
 
@@ -125,7 +125,7 @@ double pcc_ising(int x,int y,double beta,double J)
 	}
 
 	average=0.0f;
-	for(c=0;c<ISING_THERMALIZATION;c++)
+	for(c=0;c<ISING_POST_THERMALIZATION;c++)
 	{
 		short percolating;
 
@@ -138,5 +138,5 @@ double pcc_ising(int x,int y,double beta,double J)
 
 	ising2d_fini(cfgt);
 	
-	return average/((double)(ISING_THERMALIZATION));
+	return average/((double)(ISING_POST_THERMALIZATION));
 }

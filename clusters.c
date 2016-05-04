@@ -2,7 +2,7 @@
 #include "clusters.h"
 
 /*
-	A struct for identifying and classify clusters on a Ising model, given a bond configuration,
+	A struct for identifying and classifying clusters on a Ising model, given a bond configuration,
 	as in the Swendsen-Wang approach.
 */
 

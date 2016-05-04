@@ -168,11 +168,11 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 
 				if((y+1)<epsilon[c]->ly)
 				{
+					ibond2d_set_value(bonds[c],x,y,DIR_Y,0);
+
 					/*
 						Stessa cosa lungo y.
 					*/
-
-					ibond2d_set_value(bonds[c],x,y,DIR_Y,0);
 
 					if(ising2d_get_spin(epsilon[c],x,y)==ising2d_get_spin(epsilon[c],x,y+1))
 					{
@@ -302,7 +302,7 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 		*/
 
 		//if((upper==1)&&(this_percolating==1))
-		//	percolating=1;
+		//		percolating=1;
 
 		if(this_percolating==1)
 			percolating=1;
@@ -436,11 +436,11 @@ double pcc_bilayer(int x,int y,double beta,double Jup,double Jdown,double K)
 	double average;
 	int c;
 
-#define TOTAL_SWEEPS	(20000)
-#define THERMALIZATION	(10000)
+#define THERMALIZATION	(20000)
+#define POST_THERMALIZATION	(10000)
 #define UPDATE_INTERVAL	(10)
 
-	assert(TOTAL_SWEEPS>UPDATE_INTERVAL);
+	assert(THERMALIZATION>UPDATE_INTERVAL);
 
 	cfgt=bilayer_init(x,y,Jup,Jdown,K);
 	spin2d_random_configuration(cfgt->layers[LOWER_LAYER]);
@@ -456,9 +456,9 @@ double pcc_bilayer(int x,int y,double beta,double Jup,double Jdown,double K)
 	*/
 
 	delta=starting_delta;
-	chi=pow(target_delta/starting_delta,-1.0f/(TOTAL_SWEEPS/UPDATE_INTERVAL));
+	chi=pow(target_delta/starting_delta,-1.0f/(THERMALIZATION/UPDATE_INTERVAL));
 
-	for(c=0;c<TOTAL_SWEEPS;c++)
+	for(c=0;c<THERMALIZATION;c++)
 	{
 		short percolating;
 
@@ -471,7 +471,7 @@ double pcc_bilayer(int x,int y,double beta,double Jup,double Jdown,double K)
 	}
 
 	average=0.0f;
-	for(c=0;c<THERMALIZATION;c++)
+	for(c=0;c<POST_THERMALIZATION;c++)
 	{
 		short percolating;
 
@@ -484,5 +484,5 @@ double pcc_bilayer(int x,int y,double beta,double Jup,double Jdown,double K)
 
 	bilayer_fini(cfgt);
 
-	return average/((double)(THERMALIZATION));
+	return average/((double)(POST_THERMALIZATION));
 }

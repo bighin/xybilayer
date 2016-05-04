@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <math.h>
 
+#undef PARALLEL
+
 #include "xy.h"
 #include "pcc.h"
 #include "stat.h"
@@ -41,8 +43,6 @@ int main_xy(int argc,char *argv[])
 
 		tc=samples_init();
 		progress=progressbar_new(description,AVGSAMPLES);
-
-#define PARALLEL
 
 #ifdef PARALLEL
 #pragma omp parallel for
@@ -127,8 +127,6 @@ int main_bilayer_crosscheck(void)
 
 		tc=samples_init();
 		progress=progressbar_new(description,AVGSAMPLES);
-
-#define PARALLEL
 
 #ifdef PARALLEL
 #pragma omp parallel for
@@ -248,6 +246,6 @@ int main_bilayer(int argc,char *argv[])
 
 int main(int argc,char *argv[])
 {
-	//return main_bilayer(argc,argv);
-	main_xy(argc,argv);
+	return main_bilayer(argc,argv);
+	//return main_xy(argc,argv);
 }
