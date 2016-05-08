@@ -164,6 +164,11 @@ int main_bilayer_phase_diagram(int argc,char *argv[])
 	int c,millik,deltamillik,d;
 	FILE *out;
 
+#define AVGSAMPLES_BILAYER_K	(32)
+#define NR_DIMENSIONS_BILAYER_K	(6)
+
+	int dimensions[NR_DIMENSIONS_BILAYER_K]={8,12,16,20,24,32};
+
 	if(argc!=2)
 	{
 		printf("Usage: %s <logfile>\n",argv[0]);
@@ -178,15 +183,21 @@ int main_bilayer_phase_diagram(int argc,char *argv[])
 
 	init_prng();
 
-#define AVGSAMPLES_BILAYER_K	(32)
-#define NR_DIMENSIONS_BILAYER_K	(4)
+	fprintf(out,"# Phase diagram: pairs of J/T and K/T are given on each line.\n");
+	fprintf(out,"# Every pair is calculated for a different lattice size, they are:\n");
+	fprintf(out,"# ");
+
+	for(d=0;d<(NR_DIMENSIONS_BILAYER_K-1);d++)
+		fprintf(out,"2x%dx%d, ",dimensions[d],dimensions[d]);
+
+	fprintf(out,"2x%dx%d\n",dimensions[NR_DIMENSIONS_BILAYER_K-1],dimensions[NR_DIMENSIONS_BILAYER_K-1]);
+	fflush(out);
 
 	deltamillik=250;
 	for(millik=0;millik<=20000;millik+=deltamillik)
 	{
 		for(d=0;d<NR_DIMENSIONS_BILAYER_K;d++)
 		{
-			int dimensions[NR_DIMENSIONS_BILAYER]={8,12,16,20};
 
 			progressbar *progress;
 			struct samples_t *tc;
@@ -247,10 +258,9 @@ int main_bilayer_phase_diagram(int argc,char *argv[])
 
 int main_bilayer_correlator(int argc,char *argv[])
 {
-	int x,y,k,maxk,c,runs;
+	int x,y,maxk,c,runs;
 	double beta,Jup,Jdown,K;
-
-	double *zks,*localzks,*localszks;
+	double *results;
 	FILE *out;
 
 	progressbar *progress;
@@ -295,51 +305,77 @@ int main_bilayer_correlator(int argc,char *argv[])
 	assert(K>0.0f);
 
 	/*
-		Inizializziamo gli array che conterranno il correlatore
+		Inizializziamo l'array dove salveremo i risultati
 	*/
 
-	zks=malloc(sizeof(double)*maxk);
-	localzks=malloc(sizeof(double)*maxk);
-	localszks=malloc(sizeof(double)*maxk);
-
-	for(k=0;k<maxk;k++)
-		zks[k]=0.0f;
+	results=malloc(sizeof(double)*get_total_channels(maxk));
+	
+	for(c=0;c<get_total_channels(maxk);c++)
+		results[c]=0.0f;
 
 	/*
-		Inizializziamo la progressbar e siamo pronti!
+		Inizializziamo la progressbar, scriviamo l'header sul file e siamo pronti!
 	*/
 
 	snprintf(description,1024,"(2x%dx%d lattice, beta=%f, J=%f, K=%f)",x,y,beta,Jup,K);
 	description[1023]='\0';
 
-	progress=progressbar_new(description,AVGSAMPLES_BILAYER);
+	progress=progressbar_new(description,runs);
+
+	fprintf(out,"# 2x%dx%d lattice, runs=%d, beta=%f, J=%f, K=%f\n",x,y,runs,beta,Jup,K);
+	fprintf(out,"# k z(k) c_up(k) c_lo(k)\n");
+
+#ifdef PARALLEL
+#pragma omp parallel for
+#endif
 
 	for(c=0;c<runs;c++)
 	{
-		sw_bilayer(x,y,beta,Jup,Jdown,K,localzks,localszks,maxk);
-
-		for(k=0;k<maxk;k++)
-			zks[k]+=localzks[k];
+		struct sampling_ctx_t *sctx;
 		
-		progressbar_inc(progress);
+		sctx=sw_bilayer(x,y,beta,Jup,Jdown,K,maxk);
+
+#ifdef PARALLEL
+#pragma omp critical
+#endif
+
+		{
+			double *average=malloc(sizeof(double)*get_total_channels(maxk));
+			int d;
+			
+			sampling_ctx_to_tuple(sctx,average,NULL);
+
+			for(d=0;d<get_total_channels(maxk);d++)
+				results[d]+=average[d];
+
+			progressbar_inc(progress);
+
+			if(average)
+				free(average);
+		}
+		
+		sampling_ctx_fini(sctx);
+	}
+
+	/*
+		Normalizziamo e stampiamo i risultati
+	*/
+
+	for(c=0;c<get_total_channels(maxk);c++)
+		results[c]/=runs;
+
+	for(c=0;c<maxk;c++)
+	{
+		fprintf(out,"%d ",c);
+		fprintf(out,"%f ",results[get_channel_nr(maxk,"zk real",c)]);
+		fprintf(out,"%f ",results[get_channel_nr(maxk,"ck upper real",c)]);
+		fprintf(out,"%f\n",results[get_channel_nr(maxk,"ck lower real",c)]);
 	}
 
 	progressbar_finish(progress);
 
-	for(k=0;k<maxk;k++)
-		zks[k]/=runs;
-
-	for(k=0;k<maxk;k++)
-		printf("%d %f\n",k,zks[k]);
-
-	if(zks)
-		free(zks);
-
-	if(localzks)
-		free(localzks);
-
-	if(localszks)
-		free(localszks);
+	if(results)
+		free(results);
 
 	if(out)
 		fclose(out);
@@ -350,7 +386,6 @@ int main_bilayer_correlator(int argc,char *argv[])
 int main(int argc,char *argv[])
 {
 	return main_bilayer_correlator(argc,argv);
-
-	//return main_bilayer_phasediagram(argc,argv);
+	//return main_bilayer_phase_diagram(argc,argv);
 	//return main_xy(argc,argv);
 }

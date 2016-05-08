@@ -14,6 +14,18 @@ void samples_add_entry(struct samples_t *smpls,double x);
 double samples_get_average(struct samples_t *smpls);
 double samples_get_variance(struct samples_t *smpls);
 
+struct sampling_ctx_t
+{
+	struct samples_t **smpls;
+	
+	int channels;
+};
+
+struct sampling_ctx_t *sampling_ctx_init(int channels);
+void sampling_ctx_fini(struct sampling_ctx_t *sctx);
+void sampling_ctx_add_entry_to_channel(struct sampling_ctx_t *sctx,int channel,double entry);
+void sampling_ctx_to_tuple(struct sampling_ctx_t *sctx,double *average,double *stddev);
+
 struct linreg_ctx_t
 {
 	int n;

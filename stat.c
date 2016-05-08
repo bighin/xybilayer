@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <math.h>
+#include <assert.h>
 
 #include "stat.h"
 
@@ -82,6 +83,67 @@ double samples_get_variance(struct samples_t *smpls)
 	variance*=(1.0f/(n-1));
 
 	return variance;
+}
+
+/*
+	Sampling context, basic a bunch of samples_t: they can be updated
+	one by one, their averages and standard deviations can be dumped
+	to a tuple
+*/
+
+struct sampling_ctx_t *sampling_ctx_init(int channels)
+{
+	struct sampling_ctx_t *ret;
+	int c;
+	
+	if(!(ret=malloc(sizeof(struct sampling_ctx_t))))
+		return NULL;
+	
+	ret->smpls=malloc(sizeof(struct samples_t)*channels);
+	ret->channels=channels;
+	
+	for(c=0;c<ret->channels;c++)
+		ret->smpls[c]=samples_init();
+	
+	return ret;
+}
+
+void sampling_ctx_fini(struct sampling_ctx_t *sctx)
+{
+	if(sctx)
+	{
+		int c;
+
+		for(c=0;c<sctx->channels;c++)
+			samples_fini(sctx->smpls[c]);
+	
+		free(sctx);
+	}
+}
+
+void sampling_ctx_add_entry_to_channel(struct sampling_ctx_t *sctx,int channel,double entry)
+{
+	assert(channel>=0);
+	assert(channel<sctx->channels);
+	
+	samples_add_entry(sctx->smpls[channel],entry);
+}
+
+void sampling_ctx_to_tuple(struct sampling_ctx_t *sctx,double *average,double *stddev)
+{
+	int c;
+	
+	if(average)
+	{
+		for(c=0;c<sctx->channels;c++)
+			average[c]=samples_get_average(sctx->smpls[c]);
+	}
+
+	if(stddev)
+	{
+		for(c=0;c<sctx->channels;c++)
+			stddev[c]=sqrt(samples_get_variance(sctx->smpls[c]));
+	}
 }
 
 /*

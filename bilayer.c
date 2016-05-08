@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
+#include <string.h>
 
 #include "bilayer.h"
 #include "xy.h"
@@ -487,12 +488,100 @@ double pcc_bilayer(int x,int y,double beta,double Jup,double Jdown,double K)
 }
 
 /*
-	z_k, ovvero l'osservabile proposto da Andrea Trombettoni:
+	c(k), ovvero il correlatore.
 
-	exp(i phi_i + i psi_i - i phi_j - i psi_j)
+	\sum \exp(i psi_i - i psi_j)
+
+	dove k è la distanza tra i e j, mentre psi sono le variabili
+	angolari definite sul layer inferiore e o su quello superiore.
+
+	La somma è estesa a tutte le coppie di siti (i,j) che siano a distanza
+	k, considerando anche le condizioni periodiche al contorno.
+*/
+
+int ck(struct bilayer_t *cfgt,int k,short layer,double *res)
+{
+	int i,j;
+	double rc,ic;
+	
+	rc=ic=0.0f;
+
+	for(i=0;i<cfgt->lx;i++)
+	{
+		for(j=0;j<cfgt->ly;j++)
+		{
+			double psii,psij,phase;
+			double lrc,lic;
+			int ip,jp;
+
+			lrc=lic=0;
+		
+			psii=spin2d_get_spin(cfgt->layers[layer],i,j);
+			
+			ip=(i+k)%cfgt->lx;
+			jp=j;
+			
+			psij=spin2d_get_spin(cfgt->layers[layer],ip,jp);
+
+			phase=psii-psij;
+			lrc=+cos(phase);
+			lic=+sin(phase);
+
+			ip=i;
+			jp=(j+k)%cfgt->ly;
+
+			psij=spin2d_get_spin(cfgt->layers[layer],ip,jp);
+
+			phase=psii-psij;
+			lrc+=cos(phase);
+			lic+=sin(phase);
+
+			ip=(i+cfgt->lx-k)%cfgt->lx;
+			jp=j;
+
+			psij=spin2d_get_spin(cfgt->layers[layer],ip,jp);
+
+			phase=psii-psij;
+			lrc+=cos(phase);
+			lic+=sin(phase);
+
+			ip=i;
+			jp=(j+cfgt->ly-k)%cfgt->ly;
+
+			psij=spin2d_get_spin(cfgt->layers[layer],ip,jp);
+
+			phase=psii-psij;
+			lrc+=cos(phase);
+			lic+=sin(phase);		
+			
+			lrc/=4.0f;
+			lic/=4.0f;
+			
+			rc+=lrc;
+			ic+=lic;
+		}
+	}
+
+	rc/=cfgt->lx*cfgt->ly;
+	ic/=cfgt->lx*cfgt->ly;
+	
+	res[0]=rc;
+	res[1]=ic;
+
+	return 0;
+}
+
+
+/*
+	z(k), ovvero l'osservabile proposto da Andrea Trombettoni:
+
+	\sum \exp(i phi_i + i psi_i - i phi_j - i psi_j)
 
 	dove k è la distanza tra i e j, mentre phi e psi sono le variabili
-	angolari definite, rispettivamente, sul layer inferiorie e superiore.
+	angolari definite, rispettivamente, sul layer inferiore e superiore.
+	
+	La somma è estesa a tutte le coppie di siti (i,j) che siano a distanza
+	k, considerando anche le condizioni periodiche al contorno.
 */
 
 int zk(struct bilayer_t *cfgt,int k,double *res)
@@ -572,28 +661,80 @@ int zk(struct bilayer_t *cfgt,int k,double *res)
 	return 0;
 }
 
+int get_total_channels(int maxk)
+{
+	return maxk*NR_CORRELATORS+NR_SCALARS;
+}
+
+int get_channel_nr(int maxk,char *desc,int k)
+{
+	if(strstr(desc,"zk"))
+	{
+		if(strstr(desc,"real"))
+			return 2*k;
+
+		if(strstr(desc,"imag"))
+			return 2*k+1;
+
+		return -1;
+	}
+
+	if(strstr(desc,"ck"))
+	{
+		int baseline;
+	
+		if(strstr(desc,"upper"))
+			baseline=2*maxk;
+		else if(strstr(desc,"lower"))
+			baseline=4*maxk;
+		else
+			return -1;
+
+		if(strstr(desc,"real"))
+			return baseline+2*k;
+
+		if(strstr(desc,"imag"))
+			return baseline+2*k+1;
+
+		return -1;
+	}
+	
+	return -1;
+}
+
 /*
 	Swendsen-Wang algorithm for a bilayer.
 
-	The correlator zk is given as a output.
+	After thermalization the correlation functions c(k) and z(k) are given as a output.
 */
 
-int sw_bilayer(int x,int y,double beta,double Jup,double Jdown,double K,double *zks,double *szks,int maxk)
+struct sampling_ctx_t *sw_bilayer(int x,int y,double beta,double Jup,double Jdown,double K,int maxk)
 {
 	struct bilayer_t *cfgt;
-	struct samples_t **rzsamples,**izsamples;
+	struct sampling_ctx_t *sctx;
 	int c,k;
 
 	assert(maxk>0);
 	assert(maxk<=x);
 	assert(maxk<=y);
 
-	rzsamples=malloc(sizeof(struct samples_t *)*maxk);
-	izsamples=malloc(sizeof(struct samples_t *)*maxk);
+	/*
+		Inizializziamo le strutture che contengono il reticolo
+	*/
 
 	cfgt=bilayer_init(x,y,Jup,Jdown,K);
 	spin2d_random_configuration(cfgt->layers[LOWER_LAYER]);
 	spin2d_random_configuration(cfgt->layers[UPPER_LAYER]);
+
+	/*
+		There are 6*maxk channels in the sampling context, as we are going to take
+		samples for three correlators, real and imaginary parts, and every correlator
+		will be sampled from k=0 to k=(maxk-1)
+	
+		Notare che se cambio questo valore devo cambiare anche la funzione channel_nr()
+	*/
+
+	sctx=sampling_ctx_init(get_total_channels(maxk));
 
 	/*
 		Warning: the SW_THERMALIZATION and SW_POST_THERMALIZATION values
@@ -601,56 +742,42 @@ int sw_bilayer(int x,int y,double beta,double Jup,double Jdown,double K,double *
 		function of the lattice dimensions.
 	*/
 
-#define SW_THERMALIZATION		(500)
-#define SW_POST_THERMALIZATION		(250)
+#define SW_THERMALIZATION		(1000)
+#define SW_POST_THERMALIZATION		(500)
 
 	for(c=0;c<SW_THERMALIZATION;c++)
 	{
 		swendsen_wang_step_bilayer(cfgt,beta);
 	}
 
-	for(k=0;k<maxk;k++)
-	{
-		rzsamples[k]=samples_init();
-		izsamples[k]=samples_init();
-	}
-
 	for(c=0;c<SW_POST_THERMALIZATION;c++)
 	{
-		double z[2];
+		double z[2],c[2][2];
 
 		swendsen_wang_step_bilayer(cfgt,beta);
 
 		for(k=0;k<maxk;k++)
 		{
 			z[0]=z[1]=0.0f;
-		
+			c[UPPER_LAYER][0]=c[UPPER_LAYER][1]=0.0f;
+			c[LOWER_LAYER][0]=c[LOWER_LAYER][1]=0.0f;
+
 			zk(cfgt,k,z);
+			ck(cfgt,k,UPPER_LAYER,c[UPPER_LAYER]);
+			ck(cfgt,k,LOWER_LAYER,c[LOWER_LAYER]);
 		
-			samples_add_entry(rzsamples[k],z[0]);
-			samples_add_entry(izsamples[k],z[1]);
+			sampling_ctx_add_entry_to_channel(sctx,get_channel_nr(maxk,"zk real",k),z[0]);
+			sampling_ctx_add_entry_to_channel(sctx,get_channel_nr(maxk,"zk imag",k),z[1]);
+
+			sampling_ctx_add_entry_to_channel(sctx,get_channel_nr(maxk,"ck upper real",k),c[UPPER_LAYER][0]);
+			sampling_ctx_add_entry_to_channel(sctx,get_channel_nr(maxk,"ck upper imag",k),c[UPPER_LAYER][1]);
+
+			sampling_ctx_add_entry_to_channel(sctx,get_channel_nr(maxk,"ck lower real",k),c[LOWER_LAYER][0]);
+			sampling_ctx_add_entry_to_channel(sctx,get_channel_nr(maxk,"ck lower imag",k),c[LOWER_LAYER][1]);
 		}
 	}
 
-	for(k=0;k<maxk;k++)
-	{
-		zks[k]=samples_get_average(rzsamples[k]);
-		szks[k]=sqrt(samples_get_variance(rzsamples[k]));
-	}
-
-	for(k=0;k<maxk;k++)
-	{
-		samples_fini(rzsamples[k]);
-		samples_fini(izsamples[k]);
-	}
-
-	if(rzsamples)
-		free(rzsamples);
-
-	if(izsamples)
-		free(izsamples);
-
 	bilayer_fini(cfgt);
 
-	return 0;
+	return sctx;
 }
