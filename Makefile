@@ -1,9 +1,9 @@
 TARGET = xypcc
 LIBS = 
-CC = gcc-mp-5
+CC = gcc-mp-6
 #CC = clang-mp-3.8
-CFLAGS = -O2 -Wall -fopenmp -std=c11
-#CFLAGS = -g -pg
+#CFLAGS = -O2 -Wall -fopenmp -std=c11
+CFLAGS = -g -pg
 LDFLAGS = -lncurses
 
 .PHONY: clean all default

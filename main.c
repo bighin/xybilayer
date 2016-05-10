@@ -2,7 +2,7 @@
 #include <math.h>
 #include <assert.h>
 
-#undef PARALLEL
+#define PARALLEL
 
 #include "xy.h"
 #include "pcc.h"
@@ -193,7 +193,7 @@ int main_bilayer_phase_diagram(int argc,char *argv[])
 	fprintf(out,"2x%dx%d\n",dimensions[NR_DIMENSIONS_BILAYER_K-1],dimensions[NR_DIMENSIONS_BILAYER_K-1]);
 	fflush(out);
 
-	deltamillik=250;
+	deltamillik=125;
 	for(millik=0;millik<=20000;millik+=deltamillik)
 	{
 		for(d=0;d<NR_DIMENSIONS_BILAYER_K;d++)
@@ -209,7 +209,7 @@ int main_bilayer_phase_diagram(int argc,char *argv[])
 			J=1.0f;
 			K=millik*0.001f;
 
-			deltamillik=(millik<2000)?(250):(1000);
+			deltamillik=(millik<2000)?(125):(1000);
 		
 			snprintf(description,128,"(2x%dx%d lattice, K=%f)",dimensions[d],dimensions[d],K);
 
@@ -256,15 +256,114 @@ int main_bilayer_phase_diagram(int argc,char *argv[])
 	return 0;
 }
 
-int main_bilayer_correlator(int argc,char *argv[])
+int do_correlators(FILE *out,int x,int y,int runs,double beta,double Jup,double Jdown,double K)
 {
-	int x,y,maxk,c,runs;
-	double beta,Jup,Jdown,K;
-	double *results;
-	FILE *out;
+	double *results,*variances;
+	int c,maxk;
 
 	progressbar *progress;
 	char description[1024];
+
+	maxk=MIN(x,y)/2;
+
+	/*
+		Inizializziamo l'array dove salveremo i risultati e le deviazioni standard
+	*/
+
+	results=malloc(sizeof(double)*get_total_channels(maxk));
+	variances=malloc(sizeof(double)*get_total_channels(maxk));
+
+	for(c=0;c<get_total_channels(maxk);c++)
+		results[c]=0.0f;
+
+	/*
+		Inizializziamo la progressbar, scriviamo l'header sul file e siamo pronti!
+	*/
+
+	snprintf(description,1024,"(2x%dx%d lattice, beta=%f, J=%f, K=%f)",x,y,beta,Jup,K);
+	description[1023]='\0';
+
+	progress=progressbar_new(description,runs);
+
+	fprintf(out,"# 2x%dx%d lattice, runs=%d, beta=%f, J=%f, K=%f\n",x,y,runs,beta,Jup,K);
+	fprintf(out,"# k z(k) c_up(k) c_lo(k) sigma(z(k)) sigma(c_up(k)) sigma(c_lo(k))\n");
+
+#ifdef PARALLEL
+#pragma omp parallel for
+#endif
+
+	for(c=0;c<runs;c++)
+	{
+		struct sampling_ctx_t *sctx;
+		
+		sctx=sw_bilayer(x,y,beta,Jup,Jdown,K,maxk);
+
+#ifdef PARALLEL
+#pragma omp critical
+#endif
+
+		{
+			double *average=malloc(sizeof(double)*get_total_channels(maxk));
+			double *lvariance=malloc(sizeof(double)*get_total_channels(maxk));
+			int d;
+			
+			sampling_ctx_to_tuple(sctx,average,lvariance);
+
+			for(d=0;d<get_total_channels(maxk);d++)
+			{
+				results[d]+=average[d];
+				variances[d]+=lvariance[d];
+			}
+
+			progressbar_inc(progress);
+
+			if(average)
+				free(average);
+
+			if(lvariance)
+				free(lvariance);
+		}
+		
+		sampling_ctx_fini(sctx);
+	}
+
+	/*
+		Normalizziamo e stampiamo i risultati
+	*/
+
+	for(c=0;c<get_total_channels(maxk);c++)
+	{
+		results[c]/=runs;
+		variances[c]/=runs;
+	}
+
+	for(c=0;c<maxk;c++)
+	{
+		fprintf(out,"%d ",c);
+		fprintf(out,"%f ",results[get_channel_nr(maxk,"zk real",c)]);
+		fprintf(out,"%f ",results[get_channel_nr(maxk,"ck upper real",c)]);
+		fprintf(out,"%f ",results[get_channel_nr(maxk,"ck lower real",c)]);
+		fprintf(out,"%f ",sqrt(variances[get_channel_nr(maxk,"zk real",c)]));
+		fprintf(out,"%f ",sqrt(variances[get_channel_nr(maxk,"ck upper real",c)]));
+		fprintf(out,"%f\n",sqrt(variances[get_channel_nr(maxk,"ck lower real",c)]));
+	}
+
+	progressbar_finish(progress);
+
+	if(results)
+		free(results);
+
+	if(variances)
+		free(variances);
+	
+	return 0;
+}
+
+int main_bilayer_correlators(int argc,char *argv[])
+{
+	int x,y,runs;
+	double beta,Jup,Jdown,K;
+	FILE *out;
 
 	if(argc!=7)
 	{
@@ -289,7 +388,6 @@ int main_bilayer_correlator(int argc,char *argv[])
 	assert(x>0);
 	assert(x<=1024);
 
-	maxk=MIN(x,y)/2;
 	runs=atoi(argv[3]);
 	
 	assert(runs>0);
@@ -305,77 +403,10 @@ int main_bilayer_correlator(int argc,char *argv[])
 	assert(K>0.0f);
 
 	/*
-		Inizializziamo l'array dove salveremo i risultati
+		Let's go!
 	*/
-
-	results=malloc(sizeof(double)*get_total_channels(maxk));
 	
-	for(c=0;c<get_total_channels(maxk);c++)
-		results[c]=0.0f;
-
-	/*
-		Inizializziamo la progressbar, scriviamo l'header sul file e siamo pronti!
-	*/
-
-	snprintf(description,1024,"(2x%dx%d lattice, beta=%f, J=%f, K=%f)",x,y,beta,Jup,K);
-	description[1023]='\0';
-
-	progress=progressbar_new(description,runs);
-
-	fprintf(out,"# 2x%dx%d lattice, runs=%d, beta=%f, J=%f, K=%f\n",x,y,runs,beta,Jup,K);
-	fprintf(out,"# k z(k) c_up(k) c_lo(k)\n");
-
-#ifdef PARALLEL
-#pragma omp parallel for
-#endif
-
-	for(c=0;c<runs;c++)
-	{
-		struct sampling_ctx_t *sctx;
-		
-		sctx=sw_bilayer(x,y,beta,Jup,Jdown,K,maxk);
-
-#ifdef PARALLEL
-#pragma omp critical
-#endif
-
-		{
-			double *average=malloc(sizeof(double)*get_total_channels(maxk));
-			int d;
-			
-			sampling_ctx_to_tuple(sctx,average,NULL);
-
-			for(d=0;d<get_total_channels(maxk);d++)
-				results[d]+=average[d];
-
-			progressbar_inc(progress);
-
-			if(average)
-				free(average);
-		}
-		
-		sampling_ctx_fini(sctx);
-	}
-
-	/*
-		Normalizziamo e stampiamo i risultati
-	*/
-
-	for(c=0;c<get_total_channels(maxk);c++)
-		results[c]/=runs;
-
-	for(c=0;c<maxk;c++)
-	{
-		fprintf(out,"%d ",c);
-		fprintf(out,"%f ",results[get_channel_nr(maxk,"zk real",c)]);
-		fprintf(out,"%f ",results[get_channel_nr(maxk,"ck upper real",c)]);
-		fprintf(out,"%f\n",results[get_channel_nr(maxk,"ck lower real",c)]);
-	}
-
-	progressbar_finish(progress);
-
-	if(results)
-		free(results);
+	do_correlators(out,x,y,runs,beta,Jup,Jdown,K);
 
 	if(out)
 		fclose(out);
@@ -383,9 +414,150 @@ int main_bilayer_correlator(int argc,char *argv[])
 	return 0;
 }
 
+#define DRYRUN
+
+int main_bilayer_correlators_phase_diagram(int argc,char *argv[])
+{
+	int centiJ,centiK,x,y,runs;
+	double beta,J,K;
+	
+	char *basename="correlators";
+	
+	x=y=32;
+	runs=24;
+	beta=1.0f;
+
+	centiJ=35;
+	centiK=1000;
+
+	for(centiK=1000;centiK>=50;centiK-=50)
+	{
+		FILE *out;
+		char fname[1024];
+		
+		snprintf(fname,1024,"%s.%d.%d.dat",basename,centiJ,centiK);
+		fname[1023]='\0';
+
+#ifdef DRYRUN
+		printf("%s\n",fname);
+		continue;
+#endif
+
+		J=0.01f*centiJ;
+		K=0.01f*centiK;
+
+		if(!(out=fopen(fname,"w+")))
+		{
+			printf("Couldn't open %s for writing!\n",argv[1]);
+			return 0;
+		}
+
+		do_correlators(out,x,y,runs,beta,J,J,K);
+
+		if(out)
+			fclose(out);
+	}
+
+	centiJ=60;
+	centiK=50;
+
+	for(centiJ=60;centiJ<=260;centiJ+=25)
+	{
+		FILE *out;
+		char fname[1024];
+				
+		snprintf(fname,1024,"%s.%d.%d.dat",basename,centiJ,centiK);
+		fname[1023]='\0';
+
+		J=0.01f*centiJ;
+		K=0.01f*centiK;
+
+#ifdef DRYRUN
+		printf("%s\n",fname);
+		continue;
+#endif
+
+		if(!(out=fopen(fname,"w+")))
+		{
+			printf("Couldn't open %s for writing!\n",argv[1]);
+			return 0;
+		}
+
+		do_correlators(out,x,y,runs,beta,J,J,K);
+
+		if(out)
+			fclose(out);
+	}
+
+	centiJ=260;
+	centiK=100;
+
+	for(centiK=100;centiK<=1000;centiK+=50)
+	{
+		FILE *out;
+		char fname[1024];
+		
+		snprintf(fname,1024,"%s.%d.%d.dat",basename,centiJ,centiK);
+		fname[1023]='\0';
+
+#ifdef DRYRUN
+		printf("%s\n",fname);
+		continue;
+#endif
+
+		J=0.01f*centiJ;
+		K=0.01f*centiK;
+		
+		if(!(out=fopen(fname,"w+")))
+		{
+			printf("Couldn't open %s for writing!\n",argv[1]);
+			return 0;
+		}
+
+		do_correlators(out,x,y,runs,beta,J,J,K);
+
+		if(out)
+			fclose(out);
+	}
+
+	centiJ=235;
+	centiK=1000;
+
+	for(centiJ=235;centiJ>=60;centiJ-=25)
+	{
+		FILE *out;
+		char fname[1024];
+		
+		snprintf(fname,1024,"%s.%d.%d.dat",basename,centiJ,centiK);
+		fname[1023]='\0';
+
+#ifdef DRYRUN
+		printf("%s\n",fname);
+		continue;
+#endif
+
+		J=0.01f*centiJ;
+		K=0.01f*centiK;
+		
+		if(!(out=fopen(fname,"w+")))
+		{
+			printf("Couldn't open %s for writing!\n",argv[1]);
+			return 0;
+		}
+
+		do_correlators(out,x,y,runs,beta,J,J,K);
+
+		if(out)
+			fclose(out);
+	}
+
+	return 0;
+}
+
 int main(int argc,char *argv[])
 {
-	return main_bilayer_correlator(argc,argv);
+	//main_bilayer_correlators_phase_diagram(argc,argv);
+	return main_bilayer_correlators(argc,argv);
 	//return main_bilayer_phase_diagram(argc,argv);
 	//return main_xy(argc,argv);
 }

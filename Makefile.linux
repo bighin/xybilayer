@@ -1,6 +1,6 @@
 TARGET = xypcc
 LIBS = 
-CC = gcc-mp-5
+CC = gcc
 CFLAGS = -O2 -Wall -fopenmp -std=gnu99
 LDFLAGS = -lncurses -lm
 
