@@ -256,16 +256,12 @@ int main_bilayer_phase_diagram(int argc,char *argv[])
 	return 0;
 }
 
-#define DEBUG
-
 int do_correlators(FILE *out,int x,int y,int runs,double beta,double Jup,double Jdown,double K)
 {
-	double *results,*variances;
+	double *wmeans,*variances;
 	int c,maxk,total_channels;
 
-#ifndef DEBUG
 	progressbar *progress;
-#endif
 	char description[1024];
 
 	assert(x>0);
@@ -275,15 +271,16 @@ int do_correlators(FILE *out,int x,int y,int runs,double beta,double Jup,double 
 	total_channels=get_total_channels(maxk);
 
 	/*
-		Inizializziamo l'array dove salveremo i risultati e le deviazioni standard
+		Inizializziamo l'array dove salveremo le medie pesate dei risultati e le
+		relative deviazioni standard.
 	*/
 
-	results=malloc(sizeof(double)*get_total_channels(maxk));
+	wmeans=malloc(sizeof(double)*get_total_channels(maxk));
 	variances=malloc(sizeof(double)*get_total_channels(maxk));
 
 	for(c=0;c<total_channels;c++)
 	{
-		results[c]=0.0f;
+		wmeans[c]=0.0f;
 		variances[c]=0.0f;
 	}
 
@@ -294,9 +291,7 @@ int do_correlators(FILE *out,int x,int y,int runs,double beta,double Jup,double 
 	snprintf(description,1024,"(2x%dx%d lattice, beta=%f, J=%f, K=%f)",x,y,beta,Jup,K);
 	description[1023]='\0';
 
-#ifndef DEBUG
 	progress=progressbar_new(description,runs);
-#endif
 
 	fprintf(out,"# 2x%dx%d lattice, runs=%d, beta=%f, J=%f, K=%f\n",x,y,runs,beta,Jup,K);
 	fprintf(out,"# k z(k) c_up(k) c_lo(k) sigma(z(k)) sigma(c_up(k)) sigma(c_lo(k))\n");
@@ -317,73 +312,56 @@ int do_correlators(FILE *out,int x,int y,int runs,double beta,double Jup,double 
 
 		{
 			double *average=malloc(sizeof(double)*get_total_channels(maxk));
-			double *lvariance=malloc(sizeof(double)*get_total_channels(maxk));
+			double *variance=malloc(sizeof(double)*get_total_channels(maxk));
 			int d;
 			
-			sampling_ctx_to_tuple(sctx,average,lvariance);
+			sampling_ctx_to_tuple(sctx,average,variance);
 
 			for(d=0;d<total_channels;d++)
 			{
-#ifdef DEBUG
-				if(d==get_channel_nr(maxk,"zk real",2))
-					printf("%f +- %f\n",average[d],lvariance[d]);
-				
-				fflush(stdout);
-#endif
+				double weight=1.0f/variance[d];
 			
-				results[d]+=average[d];
-				variances[d]+=lvariance[d];
+				wmeans[d]+=average[d]*weight;
+				variances[d]+=weight;
 			}
 
-#ifndef DEBUG
 			progressbar_inc(progress);
-#endif
 
 			if(average)
 				free(average);
 
-			if(lvariance)
-				free(lvariance);
+			if(variance)
+				free(variance);
 		}
 		
 		sampling_ctx_fini(sctx);
 	}
 
 	/*
-		Normalizziamo e stampiamo i risultati
+		Completiamo il calcolo della media pesata e stampiamo i risultati
 	*/
 
 	for(c=0;c<total_channels;c++)
 	{
-		results[c]/=runs;
-		variances[c]/=runs;
+		wmeans[c]/=variances[c];
+		variances[c]=1.0f/variances[c];
 	}
-
-#ifdef DEBUG
-	for(c=0;c<total_channels;c++)
-	{
-		if(c==get_channel_nr(maxk,"zk real",2))
-			printf("Final results: %f +- %f\n",results[c],variances[c]);
-	}
-#endif
 
 	for(c=0;c<maxk;c++)
 	{
 		fprintf(out,"%d ",c);
-		fprintf(out,"%f ",results[get_channel_nr(maxk,"zk real",c)]);
-		fprintf(out,"%f ",results[get_channel_nr(maxk,"ck upper real",c)]);
-		fprintf(out,"%f ",results[get_channel_nr(maxk,"ck lower real",c)]);
+		fprintf(out,"%f ",wmeans[get_channel_nr(maxk,"zk real",c)]);
+		fprintf(out,"%f ",wmeans[get_channel_nr(maxk,"ck upper real",c)]);
+		fprintf(out,"%f ",wmeans[get_channel_nr(maxk,"ck lower real",c)]);
 		fprintf(out,"%f ",sqrt(variances[get_channel_nr(maxk,"zk real",c)]));
 		fprintf(out,"%f ",sqrt(variances[get_channel_nr(maxk,"ck upper real",c)]));
 		fprintf(out,"%f\n",sqrt(variances[get_channel_nr(maxk,"ck lower real",c)]));
 	}
 
-#ifndef DEBUG
 	progressbar_finish(progress);
-#endif
 
-	if(results)
-		free(results);
+	if(wmeans)
+		free(wmeans);
 
 	if(variances)
 		free(variances);
