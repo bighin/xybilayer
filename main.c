@@ -256,15 +256,23 @@ int main_bilayer_phase_diagram(int argc,char *argv[])
 	return 0;
 }
 
+#define DEBUG
+
 int do_correlators(FILE *out,int x,int y,int runs,double beta,double Jup,double Jdown,double K)
 {
 	double *results,*variances;
-	int c,maxk;
+	int c,maxk,total_channels;
 
+#ifndef DEBUG
 	progressbar *progress;
+#endif
 	char description[1024];
 
+	assert(x>0);
+	assert(y>0);
+
 	maxk=MIN(x,y)/2;
+	total_channels=get_total_channels(maxk);
 
 	/*
 		Inizializziamo l'array dove salveremo i risultati e le deviazioni standard
@@ -273,8 +281,11 @@ int do_correlators(FILE *out,int x,int y,int runs,double beta,double Jup,double 
 	results=malloc(sizeof(double)*get_total_channels(maxk));
 	variances=malloc(sizeof(double)*get_total_channels(maxk));
 
-	for(c=0;c<get_total_channels(maxk);c++)
+	for(c=0;c<total_channels;c++)
+	{
 		results[c]=0.0f;
+		variances[c]=0.0f;
+	}
 
 	/*
 		Inizializziamo la progressbar, scriviamo l'header sul file e siamo pronti!
@@ -283,7 +294,9 @@ int do_correlators(FILE *out,int x,int y,int runs,double beta,double Jup,double 
 	snprintf(description,1024,"(2x%dx%d lattice, beta=%f, J=%f, K=%f)",x,y,beta,Jup,K);
 	description[1023]='\0';
 
+#ifndef DEBUG
 	progress=progressbar_new(description,runs);
+#endif
 
 	fprintf(out,"# 2x%dx%d lattice, runs=%d, beta=%f, J=%f, K=%f\n",x,y,runs,beta,Jup,K);
 	fprintf(out,"# k z(k) c_up(k) c_lo(k) sigma(z(k)) sigma(c_up(k)) sigma(c_lo(k))\n");
@@ -309,13 +322,22 @@ int do_correlators(FILE *out,int x,int y,int runs,double beta,double Jup,double 
 			
 			sampling_ctx_to_tuple(sctx,average,lvariance);
 
-			for(d=0;d<get_total_channels(maxk);d++)
+			for(d=0;d<total_channels;d++)
 			{
+#ifdef DEBUG
+				if(d==get_channel_nr(maxk,"zk real",2))
+					printf("%f +- %f\n",average[d],lvariance[d]);
+				
+				fflush(stdout);
+#endif
+			
 				results[d]+=average[d];
 				variances[d]+=lvariance[d];
 			}
 
+#ifndef DEBUG
 			progressbar_inc(progress);
+#endif
 
 			if(average)
 				free(average);
@@ -331,11 +353,19 @@ int do_correlators(FILE *out,int x,int y,int runs,double beta,double Jup,double 
 		Normalizziamo e stampiamo i risultati
 	*/
 
-	for(c=0;c<get_total_channels(maxk);c++)
+	for(c=0;c<total_channels;c++)
 	{
 		results[c]/=runs;
 		variances[c]/=runs;
 	}
+
+#ifdef DEBUG
+	for(c=0;c<total_channels;c++)
+	{
+		if(c==get_channel_nr(maxk,"zk real",2))
+			printf("Final results: %f +- %f\n",results[c],variances[c]);
+	}
+#endif
 
 	for(c=0;c<maxk;c++)
 	{
@@ -348,7 +378,9 @@ int do_correlators(FILE *out,int x,int y,int runs,double beta,double Jup,double 
 		fprintf(out,"%f\n",sqrt(variances[get_channel_nr(maxk,"ck lower real",c)]));
 	}
 
+#ifndef DEBUG
 	progressbar_finish(progress);
+#endif
 
 	if(results)
 		free(results);
@@ -414,7 +446,7 @@ int main_bilayer_correlators(int argc,char *argv[])
 	return 0;
 }
 
-#define DRYRUN
+#undef DRYRUN
 
 int main_bilayer_correlators_phase_diagram(int argc,char *argv[])
 {

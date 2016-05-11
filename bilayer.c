@@ -524,8 +524,8 @@ int ck(struct bilayer_t *cfgt,int k,short layer,double *res)
 			psij=spin2d_get_spin(cfgt->layers[layer],ip,jp);
 
 			phase=psii-psij;
-			lrc=+cos(phase);
-			lic=+sin(phase);
+			lrc+=cos(phase);
+			lic+=sin(phase);
 
 			ip=i;
 			jp=(j+k)%cfgt->ly;
@@ -611,8 +611,8 @@ int zk(struct bilayer_t *cfgt,int k,double *res)
 			phij=spin2d_get_spin(cfgt->layers[UPPER_LAYER],ip,jp);
 
 			phase=phii+psii-phij-psij;
-			lrz=+cos(phase);
-			liz=+sin(phase);
+			lrz+=cos(phase);
+			liz+=sin(phase);
 
 			ip=i;
 			jp=(j+k)%cfgt->ly;

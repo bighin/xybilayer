@@ -24,7 +24,7 @@ struct sampling_ctx_t
 struct sampling_ctx_t *sampling_ctx_init(int channels);
 void sampling_ctx_fini(struct sampling_ctx_t *sctx);
 void sampling_ctx_add_entry_to_channel(struct sampling_ctx_t *sctx,int channel,double entry);
-void sampling_ctx_to_tuple(struct sampling_ctx_t *sctx,double *average,double *stddev);
+void sampling_ctx_to_tuple(struct sampling_ctx_t *sctx,double *average,double *variance);
 
 struct linreg_ctx_t
 {

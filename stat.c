@@ -99,7 +99,7 @@ struct sampling_ctx_t *sampling_ctx_init(int channels)
 	if(!(ret=malloc(sizeof(struct sampling_ctx_t))))
 		return NULL;
 	
-	ret->smpls=malloc(sizeof(struct samples_t)*channels);
+	ret->smpls=malloc(sizeof(struct samples_t *)*channels);
 	ret->channels=channels;
 	
 	for(c=0;c<ret->channels;c++)
@@ -129,7 +129,7 @@ void sampling_ctx_add_entry_to_channel(struct sampling_ctx_t *sctx,int channel,d
 	samples_add_entry(sctx->smpls[channel],entry);
 }
 
-void sampling_ctx_to_tuple(struct sampling_ctx_t *sctx,double *average,double *stddev)
+void sampling_ctx_to_tuple(struct sampling_ctx_t *sctx,double *average,double *variance)
 {
 	int c;
 	
@@ -139,10 +139,10 @@ void sampling_ctx_to_tuple(struct sampling_ctx_t *sctx,double *average,double *s
 			average[c]=samples_get_average(sctx->smpls[c]);
 	}
 
-	if(stddev)
+	if(variance)
 	{
 		for(c=0;c<sctx->channels;c++)
-			stddev[c]=sqrt(samples_get_variance(sctx->smpls[c]));
+			variance[c]=samples_get_variance(sctx->smpls[c]);
 	}
 }
 
