@@ -11,8 +11,8 @@ LDFLAGS = -lncurses
 default: $(TARGET)
 all: default
 
-OBJECTS = $(patsubst %.c, %.o, $(wildcard *.c libprogressbar/*.c))
-HEADERS = $(wildcard *.h libprogressbar/*.h)
+OBJECTS = $(patsubst %.c, %.o, $(wildcard *.c libprogressbar/*.c thr_pool/*.c))
+HEADERS = $(wildcard *.h libprogressbar/*.h thr_pool/*.h)
 
 %.o: %.c $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -23,5 +23,5 @@ $(TARGET): $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) -Wall $(LIBS) -o $@
 
 clean:
-	-rm -f *.o libprogressbar/*.o
+	-rm -f *.o libprogressbar/*.o thr_pool/*.o
 	-rm -f $(TARGET)

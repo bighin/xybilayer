@@ -27,8 +27,6 @@ int main_xy(int argc,char *argv[])
 		return 0;
 	}
 
-	init_prng();
-
 #define NR_DIMENSIONS	(5)
 #define AVGSAMPLES	(100)
 
@@ -83,8 +81,6 @@ int main_xy(int argc,char *argv[])
 int main_ising(void)
 {
 	int c;
-	
-	init_prng();
 
 	for(c=0;c<10;c++)
 		printf("%f\n",1.0f/pcc_ising(16,16,1.5f,1.0f));
@@ -110,8 +106,6 @@ int main_ising(void)
 int main_bilayer_crosscheck(void)
 {
 	int c,d;
-
-	init_prng();
 
 #define NR_DIMENSIONS_BILAYER	(5)
 #define AVGSAMPLES_BILAYER	(20)
@@ -180,8 +174,6 @@ int main_bilayer_phase_diagram(int argc,char *argv[])
 		printf("Couldn't open %s for writing!\n",argv[1]);
 		return 0;
 	}
-
-	init_prng();
 
 	fprintf(out,"# Phase diagram: pairs of J/T and K/T are given on each line.\n");
 	fprintf(out,"# Every pair is calculated for a different lattice size, they are:\n");
@@ -566,7 +558,9 @@ int main_bilayer_correlators_phase_diagram(int argc,char *argv[])
 
 int main(int argc,char *argv[])
 {
-	//main_bilayer_correlators_phase_diagram(argc,argv);
+	init_prng();
+
+	//main_bilayer_phase_diagram_mp(argc,argv);
 	return main_bilayer_correlators(argc,argv);
 	//return main_bilayer_phase_diagram(argc,argv);
 	//return main_xy(argc,argv);
