@@ -106,10 +106,10 @@ int main_bilayer_phase_diagram_mp(int argc,char *argv[])
 
 	thr_pool_t *thp=thr_pool_create(nworkers,nworkers,16,NULL);
 
+	pthread_mutex_init(&write_mutex,NULL);
+
 	printf("Using %d worker threads in the pool, and %d inner parallel threads,\n",nworkers,nthreads);
 	printf("for a total of %d concurrent threads.\n",nworkers*nthreads);
-
-        pthread_mutex_init(&write_mutex,NULL);
 
 	fprintf(out,"# Phase diagram: pairs of J/T and K/T are given on each line.\n");
 	fprintf(out,"# Every pair is calculated for a different lattice size, they are:\n");

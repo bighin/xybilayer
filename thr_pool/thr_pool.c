@@ -33,6 +33,29 @@ int clock_gettime(int clk_id, struct timespec *ts)
 }
 #endif
 
+/*
+	Wrappers to avoid compiler warnings
+*/
+
+void pthread_mutex_unlock_wrapper(void *mutex)
+{
+	pthread_mutex_unlock((pthread_mutex_t *)(mutex));
+}
+
+void worker_cleanup(thr_pool_t *pool);
+
+void worker_cleanup_wrapper(void *pool)
+{
+	worker_cleanup((thr_pool_t *)(pool));
+}
+
+void job_cleanup(thr_pool_t *pool);
+
+void job_cleanup_wrapper(void *pool)
+{
+	job_cleanup((thr_pool_t *)(pool));
+}
+
 thr_pool_t *thr_pools = NULL;
 pthread_mutex_t thr_pool_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -118,7 +141,7 @@ worker_thread(void *arg)
      * if a timeout occurs or if the pool is being destroyed.
      */
     (void) pthread_mutex_lock(&pool->pool_mutex);
-    pthread_cleanup_push(worker_cleanup, pool);
+    pthread_cleanup_push(worker_cleanup_wrapper, pool);
     active.active_tid = pthread_self();
     for (;;) {
         /*
@@ -163,7 +186,7 @@ worker_thread(void *arg)
             active.active_next = pool->pool_active;
             pool->pool_active = &active;
             (void) pthread_mutex_unlock(&pool->pool_mutex);
-            pthread_cleanup_push(job_cleanup, pool);
+            pthread_cleanup_push(job_cleanup_wrapper, pool);
             free(job);
             /*
              * Call the specified job function.
@@ -316,7 +339,7 @@ void
 thr_pool_wait(thr_pool_t *pool)
 {
     (void) pthread_mutex_lock(&pool->pool_mutex);
-    pthread_cleanup_push(pthread_mutex_unlock, &pool->pool_mutex);
+    pthread_cleanup_push(pthread_mutex_unlock_wrapper, &pool->pool_mutex);
     while (pool->pool_head != NULL || pool->pool_active != NULL) {
         pool->pool_flags |= POOL_WAIT;
         (void) pthread_cond_wait(&pool->pool_waitcv, &pool->pool_mutex);
@@ -331,7 +354,7 @@ thr_pool_destroy(thr_pool_t *pool)
     job_t *job;
 
     (void) pthread_mutex_lock(&pool->pool_mutex);
-    pthread_cleanup_push(pthread_mutex_unlock, &pool->pool_mutex);
+    pthread_cleanup_push(pthread_mutex_unlock_wrapper, &pool->pool_mutex);
 
     /* mark the pool as being destroyed; wakeup idle workers */
     pool->pool_flags |= POOL_DESTROY;
