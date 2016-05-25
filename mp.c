@@ -108,7 +108,7 @@ int main_bilayer_phase_diagram_mp(int argc,char *argv[])
 
 	pthread_mutex_init(&write_mutex,NULL);
 
-	printf("Using %d worker threads in the pool, and %d inner parallel threads,\n",nworkers,nthreads);
+	printf("Debug info: using %d worker threads in the pool, and %d inner threads,\n",nworkers,nthreads);
 	printf("for a total of %d concurrent threads.\n",nworkers*nthreads);
 
 	fprintf(out,"# Phase diagram: pairs of J/T and K/T are given on each line.\n");

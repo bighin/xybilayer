@@ -556,6 +556,50 @@ int main_bilayer_correlators_phase_diagram(int argc,char *argv[])
 	return 0;
 }
 
+int main_bilayer_correlators_phase_diagram(int argc,char *argv[])
+{
+	int centiJ,centiK,x,y,runs;
+	double beta,J,K;
+
+	char *basename="cx48";
+
+	x=y=48;
+	runs=24;
+	beta=1.0f;
+
+	for(centiK=25;centiK<=1000;centiK+=25)
+	{
+		for(centiJ=60;centiJ<=260;centiJ+=25)
+		{
+			FILE *out;
+			char fname[1024];
+
+			snprintf(fname,1024,"%s.%d.%d.dat",basename,centiJ,centiK);
+			fname[1023]='\0';
+
+#ifdef DRYRUN
+			printf("%s\n",fname);
+			continue;
+#endif
+			J=0.01f*centiJ;
+			K=0.01f*centiK;
+
+			if(!(out=fopen(fname,"w+")))
+			{
+				printf("Couldn't open %s for writing!\n",argv[1]);
+				return 0;
+			}
+
+			do_correlators(out,x,y,runs,beta,J,J,K);
+
+			if(out)
+				fclose(out);
+		}
+	}
+
+	return 0;
+}
+
 int main(int argc,char *argv[])
 {
 	init_prng();
