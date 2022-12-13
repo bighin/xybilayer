@@ -1,5 +1,5 @@
 /*
-	Two-dimensional XY bilayer
+	Monte Carlo simulation of a two-dimensional XY bilayer model
 */
 
 #include <stdio.h>
@@ -66,8 +66,8 @@ void wolff_embedded_cluster(struct spin2d_t *cfgt,struct vec2d_t **parallel,stru
 	/*
 		Wolff's embedded cluster
 
-		Separo i gradi di libertà di spin paralleli e ortogonali al vettore unitario
-		e costruisco un modello di Ising a partire dai gradi di spin paralleli a r.
+		After choosing a reference vector, the degrees of freedom of the system are split
+		as parallel and orthogonal to the vector, leading to two effective Ising models.
 	*/
 
 	*epsilon1=ising2d_init(cfgt->lx,cfgt->ly);
@@ -79,7 +79,7 @@ void wolff_embedded_cluster(struct spin2d_t *cfgt,struct vec2d_t **parallel,stru
 	spin2d_projection(cfgt,alpha,*parallel,*orthogonal,*epsilon1,*epsilon2);
 
 	/*
-		Dapprima costruisco le variabil Jij, definite su ciascun bond
+		We first build the Jij variables, defined on each bond
 	*/
 
 	*Jij1=bond2d_init(cfgt->lx,cfgt->ly);
@@ -139,7 +139,7 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 	short percolating;
 
 	/*
-		A partire da Jij ora costruisco in modo stocastico i bond tra i vari siti.
+		Now the Jij's are used to stochastically activate bonds between sites.
 	*/
 
 	for(c=0;c<=1;c++)
@@ -155,8 +155,8 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 					ibond2d_set_value(bonds[c],x,y,DIR_X,0);
 
 					/*
-						Se due spin adiacenti lungo x sono concordi allora
-						attivo il bond con probabilità p.
+						If two spins are first neighbours along the x direction and have the same sign,
+						the bond is activated with probability p.
 					*/
 
 					if(ising2d_get_spin(epsilon[c],x,y)==ising2d_get_spin(epsilon[c],x+1,y))
@@ -173,7 +173,7 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 					ibond2d_set_value(bonds[c],x,y,DIR_Y,0);
 
 					/*
-						Stessa cosa lungo y.
+						Same along the y direction.
 					*/
 
 					if(ising2d_get_spin(epsilon[c],x,y)==ising2d_get_spin(epsilon[c],x,y+1))
@@ -189,7 +189,7 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 	}
 
 	/*
-		Creo anche i bonds verticali
+		Here vertical bonds are created, as well.
 	*/
 
 	ivbonds=ivbond2d_init(epsilon[LOWER_LAYER]->lx,epsilon[LOWER_LAYER]->ly);
@@ -211,7 +211,7 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 	}
 
 	/*
-		Identifico i clusters
+		Let us identify the clusters
 	*/
 
 
@@ -219,7 +219,7 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 	nr_clusters=ising2d_identify_bclusters(bonds,ivbonds,bclusters);
 
 	/*
-		Valuto le dimensioni di ciascun cluster e stabilisco se c'è stata percolazione
+		We evaluate the dimensions of each cluster, establishing if percolation has happened.
 	*/
 
 #pragma GCC diagnostic push
@@ -309,7 +309,7 @@ short swendsen_wang_ising_bilayer_step(struct ising2d_t *epsilon[2],struct bond2
 #pragma GCC diagnostic pop
 
 	/*
-		Flippo i clusters appena creati
+		The clusters just created are flipped
 	*/
 
 	for(c=1;c<nr_clusters;c++)
@@ -341,13 +341,13 @@ short swendsen_wang_step_bilayer(struct bilayer_t *cfgt,double beta)
 	short percolating;
 
 	/*
-		Scelgo un vettore unitario casuale r, definito dall'angolo alpha
+		We choose a random two-dimensional unitary vector, defined by the angle \alpha
 	*/
 
 	alpha=gen_random_number()*2.0f*M_PI;
 
 	/*
-		Applico l'algoritmo embedded cluster su ciascun layer
+		The embedded cluster algorithm is applied to each layer.
 	*/
 
 	for(l=0;l<=1;l++)
@@ -357,7 +357,7 @@ short swendsen_wang_step_bilayer(struct bilayer_t *cfgt,double beta)
 	}
 
 	/*
-		Mancano da costruire i bond verticali
+		We also need to build the vertical bonds.
 	*/
 
 	vbonds1=vbond2d_init(cfgt->lx,cfgt->ly);
@@ -390,14 +390,14 @@ short swendsen_wang_step_bilayer(struct bilayer_t *cfgt,double beta)
 	}
 
 	/*
-		Avendo creato due modelli di Ising effettivi uso l'algoritmo di Swendsen-Wang su quelli.
+		After having obtained two effective Ising models, we apply the Swendsen-Wang on each one.
 	*/
 
 	percolating=swendsen_wang_ising_bilayer_step(epsilon1,Jij1,vbonds1,beta);
 	percolating+=swendsen_wang_ising_bilayer_step(epsilon2,Jij2,vbonds2,beta);
 
 	/*
-		Ricostruisco gli spin iniziali.
+		The initial spins are reconstructed.
 	*/
 
 	for(l=0;l<=1;l++)
@@ -426,7 +426,7 @@ short swendsen_wang_step_bilayer(struct bilayer_t *cfgt,double beta)
 }
 
 /*
-	Probability changing cluster for a 2D XY bilayer
+	Probability changing cluster for a two-dimensional XY bilayer
 */
 
 double pcc_bilayer(int x,int y,double beta,double Jup,double Jdown,double K)
@@ -450,9 +450,10 @@ double pcc_bilayer(int x,int y,double beta,double Jup,double Jdown,double K)
 	target_delta=0.000680f;
 
 	/*
-		delta (la variazione di beta dopo ogni passo) viene aggiustato ogni
-		UPDATE_INTERVAL passi. La variazione chi viene calcolata in modo tale
-		che inizialmente delta valga starting_delta e alla fine valga target_delta;
+		\delta (the \beta variation after each step) is adjusted each UPDATE_INTERVAL steps.
+
+		The adjustment is performed such that in the beginning \delta is starting_delta,
+		whereas at the end is target_delta.
 	*/
 
 	delta=starting_delta;
@@ -488,15 +489,15 @@ double pcc_bilayer(int x,int y,double beta,double Jup,double Jdown,double K)
 }
 
 /*
-	c(k), ovvero il correlatore.
+	c(k), i.e. the in-plane correlator, mathematically:
 
 	\sum \exp(i psi_i - i psi_j)
 
-	dove k è la distanza tra i e j, mentre psi sono le variabili
-	angolari definite sul layer inferiore e o su quello superiore.
+	where k is the distance between i and j, while the psi are
+	the XY variables defined either on the upper or on the lower layer.
 
-	La somma è estesa a tutte le coppie di siti (i,j) che siano a distanza
-	k, considerando anche le condizioni periodiche al contorno.
+	The sum extends over all pairs of sites (i, j) at a distance k,
+	taking into account periodic boundary conditions.
 */
 
 int ck(struct bilayer_t *cfgt,int k,short layer,double *res)
@@ -573,15 +574,15 @@ int ck(struct bilayer_t *cfgt,int k,short layer,double *res)
 
 
 /*
-	z(k), ovvero l'osservabile proposto da Andrea Trombettoni:
+	z(k), i.e. the 'anomalous' correlator proposed by Andrea:
 
 	\sum \exp(i phi_i + i psi_i - i phi_j - i psi_j)
 
-	dove k è la distanza tra i e j, mentre phi e psi sono le variabili
-	angolari definite, rispettivamente, sul layer inferiore e superiore.
+	where k is the distance between i and j, while phi e psi are XY variables
+	defined, respectively, on the lower and upper layer.
 	
-	La somma è estesa a tutte le coppie di siti (i,j) che siano a distanza
-	k, considerando anche le condizioni periodiche al contorno.
+	The sum extends over all pairs of sites (i, j) at a distance k,
+	taking into account periodic boundary conditions.
 */
 
 int zk(struct bilayer_t *cfgt,int k,double *res)
@@ -719,7 +720,7 @@ struct sampling_ctx_t *sw_bilayer(int x,int y,double beta,double Jup,double Jdow
 	assert(maxk<=y);
 
 	/*
-		Inizializziamo le strutture che contengono il reticolo
+		Initialization of various struct's
 	*/
 
 	cfgt=bilayer_init(x,y,Jup,Jdown,K);
@@ -737,7 +738,7 @@ struct sampling_ctx_t *sw_bilayer(int x,int y,double beta,double Jup,double Jdow
 	sctx=sampling_ctx_init(get_total_channels(maxk));
 
 	/*
-		Warning: the SW_THERMALIZATION and SW_POST_THERMALIZATION values
+		Note that the SW_THERMALIZATION and SW_POST_THERMALIZATION values
 		are just tentative and need to be adjusted, in particular as a
 		function of the lattice dimensions.
 	*/

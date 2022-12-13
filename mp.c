@@ -1,7 +1,5 @@
 /*
-	main_bilayer_phase_diagram(), massively parallel version
-
-	FIXME: codice del tutto sperimentale, mai provato seriamente né debuggato.
+	main_bilayer_phase_diagram(), massively parallel version, using an OpenMP thread_pool().
 */
 
 #include <stdio.h>

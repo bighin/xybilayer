@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
+#include <omp.h>
 
 #define PARALLEL
 
@@ -22,8 +23,8 @@ int do_correlators(FILE *out,int x,int y,int runs,double beta,double Jup,double 
 	total_channels=get_total_channels(maxk);
 
 	/*
-		Inizializziamo l'array dove salveremo le medie pesate dei risultati e le
-		relative deviazioni standard.
+		We initialize an array where the means and variances of sampled
+		quantities will be saved.
 	*/
 
 	wmeans=malloc(sizeof(double)*get_total_channels(maxk));
@@ -36,12 +37,15 @@ int do_correlators(FILE *out,int x,int y,int runs,double beta,double Jup,double 
 	}
 
 	/*
-		Scriviamo l'header sul file e siamo pronti!
+		We write a nice header on the output file and we are good to go!
 	*/
 
 	fprintf(out,"# 2x%dx%d lattice, runs=%d, beta=%f, J=%f, K=%f\n",x,y,runs,beta,Jup,K);
 	fprintf(out,"# k z(k) c_up(k) c_lo(k) sigma(z(k)) sigma(c_up(k)) sigma(c_lo(k))\n");
 
+	/*
+		Do all the Monte Carlo runs, saving and the results for calculating averages.
+	*/
 
 	for(c=0;c<runs;c++)
 	{
@@ -72,7 +76,7 @@ int do_correlators(FILE *out,int x,int y,int runs,double beta,double Jup,double 
 	}
 
 	/*
-		Completiamo il calcolo della media pesata e stampiamo i risultati
+		Finally we calculate a weighted average and print the results.
 	*/
 
 	for(c=0;c<total_channels;c++)

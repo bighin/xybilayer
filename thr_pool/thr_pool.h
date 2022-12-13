@@ -85,9 +85,6 @@ extern thr_pool_t *thr_pools;
 /* protects thr_pools */
 extern pthread_mutex_t thr_pool_lock;
 
-/* set of all signals */
-sigset_t fillset;
-
 extern void *worker_thread(void *);
 /*
  * Create a thread pool.

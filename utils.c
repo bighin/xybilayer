@@ -19,7 +19,7 @@ int gen_random_int(void)
 }
 
 /*
-	This struct identifies a two-dimensional vector lattice
+	This struct represents a two-dimensional vector lattice
 */
 
 struct vec2d_t *vec2d_init(int x,int y)
@@ -83,7 +83,7 @@ void vec2d_set_vector(struct vec2d_t *v,int x,int y,double vx,double vy)
 }
 
 /*
-	This struct identifies a two-dimensional spin configuration
+	This struct represents a two-dimensional spin configuration
 */
 
 struct spin2d_t *spin2d_init(int x,int y)
@@ -149,7 +149,7 @@ void spin2d_random_configuration(struct spin2d_t *cfgt)
 }
 
 /*
-	This struct identifies a two-dimensional Ising-like configuration.
+	This struct represents a two-dimensional Ising-like configuration.
 */
 
 struct ising2d_t *ising2d_init(int x,int y)
@@ -313,7 +313,7 @@ void ibond2d_set_value(struct ibond2d_t *b,int x,int y,short direction,int value
 }
 
 /*
-	vbond2d_t and ivbond2d_t describe a lattice of vertical bond
+	vbond2d_t and ivbond2d_t represents a lattice of vertical bond
 	variables (defined between the upper and lower layers)
 	taking double and integer values, respectively.
 */

@@ -1,7 +1,7 @@
 /*
-	Probability changing cluster for the 2D XY model
+	Probability changing cluster for the two-dimensional XY model.
 
-	Reference: PhysRevB.65.184405
+	For an introduction to the method, please refer to: Y. Tomita and Y. Okabe, Phys. Rev. B 65, 184405 (2002).
 */
 
 #include <assert.h>
@@ -29,9 +29,10 @@ double pcc(int x,int y,double beta,double J)
 	target_delta=0.000680f;
 
 	/*
-		delta (la variazione di beta dopo ogni passo) viene aggiustato ogni
-		UPDATE_INTERVAL passi. La variazione chi viene calcolata in modo tale
-		che inizialmente delta valga starting_delta e alla fine valga target_delta;
+		\delta (the \beta variation after each step) is adjusted each UPDATE_INTERVAL steps.
+
+		The adjustment is performed such that in the beginning \delta is starting_delta,
+		whereas at the end is target_delta.
 	*/
 
 	delta=starting_delta;
@@ -67,7 +68,7 @@ double pcc(int x,int y,double beta,double J)
 }
 
 /*
-	Probability changing cluster for the 2D Ising model
+	Probability changing cluster for the two-dimensional Ising model
 */
 
 double pcc_ising(int x,int y,double beta,double J)

@@ -1,39 +1,7 @@
 /*
 	xy.c
 	
-	Swendsen-Wang algorithm and probability changing cluster
-	for a 2D XY model.
-	
-	Giacomo Bighin <bighin@gmail.com>
-
-	Copyright (c) 2016, Giacomo Bighin
-	All rights reserved.
-
-	Redistribution and use in source and binary forms, with or without
-	modification, are permitted provided that the following conditions are met:
-
-	1. Redistributions of source code must retain the above copyright
-	   notice, this list of conditions and the following disclaimer.
-	2. Redistributions in binary form must reproduce the above copyright
-	   notice, this list of conditions and the following disclaimer in the
-	   documentation and/or other materials provided with the distribution.
-	3. All advertising materials mentioning features or use of this software
-	   must display the following acknowledgement:
-	   This product includes software developed by the <organization>.
-	4. Neither the name of the <organization> nor the
-	   names of its contributors may be used to endorse or promote products
-	   derived from this software without specific prior written permission.
-
-	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
-	EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-	WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-	DISCLAIMED. IN NO EVENT THE COPYRIGHT HOLDER SHALL BE LIABLE FOR ANY
-	DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-	(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-	LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-	ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-	(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-	SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+	Swendsen-Wang algorithm and probability changing cluster for a 2D XY model.
 */
 
 #include <stdio.h>
@@ -221,7 +189,7 @@ short swendsen_wang_ising_step(struct ising2d_t *epsilon,struct bond2d_t *Jij,do
 	short percolating;
 
 	/*
-		A partire da Jij ora costruisco in modo stocastico i bond tra i vari siti.
+		Now the Jij's are used to stochastically activate bonds between sites.
 	*/
 
 	bonds=ibond2d_init(epsilon->lx,epsilon->ly);
@@ -235,8 +203,8 @@ short swendsen_wang_ising_step(struct ising2d_t *epsilon,struct bond2d_t *Jij,do
 				ibond2d_set_value(bonds,x,y,DIR_X,0);
 
 				/*
-					Se due spin adiacenti lungo x sono concordi allora
-					attivo il bond con probabilità p.
+					If two spins are first neighbours along the x direction and have the same sign,
+					the bond is activated with probability p.
 				*/
 
 				if(ising2d_get_spin(epsilon,x,y)==ising2d_get_spin(epsilon,x+1,y))
@@ -251,7 +219,7 @@ short swendsen_wang_ising_step(struct ising2d_t *epsilon,struct bond2d_t *Jij,do
 			if((y+1)<epsilon->ly)
 			{
 				/*
-					Stessa cosa lungo y.
+					Same along the y direction.
 				*/
 
 				ibond2d_set_value(bonds,x,y,DIR_Y,0);
@@ -268,14 +236,14 @@ short swendsen_wang_ising_step(struct ising2d_t *epsilon,struct bond2d_t *Jij,do
 	}
 
 	/*
-		Identifico i clusters
+		Let us identify the clusters
 	*/
 
 	clusters=clusters_init(epsilon->lx,epsilon->ly);
 	nr_clusters=ising2d_identify_clusters(bonds,clusters);
 
 	/*
-		Valuto le dimensioni di ciascun cluster e stabilisco se c'è stata percolazione
+		We evaluate the dimensions of each cluster, establishing if percolation has happened.
 	*/
 
 	percolating=0;
@@ -313,7 +281,7 @@ short swendsen_wang_ising_step(struct ising2d_t *epsilon,struct bond2d_t *Jij,do
 	}
 
 	/*
-		Flippo i clusters appena creati
+		The clusters just created are flipped
 	*/
 		
 	for(c=1;c<nr_clusters;c++)
@@ -333,7 +301,8 @@ short swendsen_wang_ising_step(struct ising2d_t *epsilon,struct bond2d_t *Jij,do
 /*
 	A Swendsen-Wang step for the 2D XY model.
 
-	See also "Monte Carlo Simulations of Spin Systems", by Wolfhard Janke
+	For a description of the method, see for instance:
+	W. Janke, "Monte Carlo Simulations of Spin Systems", in: K.H. Hoffmann, M. Schreiber (eds.) "Computational Physics", (1996, Springer, Berlin, Heidelberg).
 */
 
 short swendsen_wang_step(struct spin2d_t *cfgt,double beta,double J)
@@ -347,7 +316,7 @@ short swendsen_wang_step(struct spin2d_t *cfgt,double beta,double J)
 	short percolating;
 
 	/*
-		Scelgo un vettore unitario casuale r, definito dall'angolo alpha
+		We choose a random two-dimensional unitary vector, defined by the angle \alpha
 	*/
 
 	alpha=gen_random_number()*2.0f*M_PI;
@@ -355,8 +324,8 @@ short swendsen_wang_step(struct spin2d_t *cfgt,double beta,double J)
 	/*
 		Wolff's embedded cluster
 
-		Separo i gradi di libertà di spin paralleli e ortogonali al vettore unitario
-		e costruisco un modello di Ising a partire dai gradi di spin paralleli a r.
+		After choosing a reference vector, the degrees of freedom of the system are split
+		as parallel and orthogonal to the vector, leading to two effective Ising models.
 	*/
 
 	epsilon1=ising2d_init(cfgt->lx,cfgt->ly);
@@ -368,7 +337,7 @@ short swendsen_wang_step(struct spin2d_t *cfgt,double beta,double J)
 	spin2d_projection(cfgt,alpha,parallel,orthogonal,epsilon1,epsilon2);
 
 	/*
-		Dapprima costruisco le variabil Jij, definite su ciascun bond
+		At first I construct the Jij variables, defined on each bond.
 	*/
 
 	Jij1=bond2d_init(cfgt->lx,cfgt->ly);
@@ -416,14 +385,14 @@ short swendsen_wang_step(struct spin2d_t *cfgt,double beta,double J)
 	}
 
 	/*
-		Avendo creato due modelli di Ising effettivi uso l'algoritmo di Swendsen-Wang su quelli.
+		After having obtained two effective Ising models, we apply the Swendsen-Wang on each one.
 	*/
 
 	percolating=swendsen_wang_ising_step(epsilon1,Jij1,beta);
 	percolating+=swendsen_wang_ising_step(epsilon2,Jij2,beta);
 
 	/*
-		Ricostruisco gli spin iniziali.
+		The initial spins are reconstructed.
 	*/
 
 	spin2d_reconstruct(cfgt,alpha,parallel,orthogonal,epsilon1,epsilon2);
