@@ -16,4 +16,4 @@ The following libraries/codes are included in the repository:
 
 # Usage
 
-Compile the code using the provided Makefile (`make`), eventually adapting it to point to the correct location of your C compiler and of your libraries. Run the code as `./xypcc`).
+Compile the code using the provided Makefile (`make`), eventually adapting it to point to the correct location of your C compiler and of your libraries. Run the code as `./xypcc`.
